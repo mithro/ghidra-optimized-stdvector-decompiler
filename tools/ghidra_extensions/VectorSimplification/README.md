@@ -228,16 +228,6 @@ $GHIDRA_INSTALL_DIR/ghidraRun
 # Check console output for pattern detection messages
 ```
 
-## Comparison with Post-Processing Approach
-
-| Aspect | Java Extension | Post-Processing |
-|--------|----------------|-----------------|
-| **Pattern Recognition** | ✅ Native pcode analysis | ⚠️ String matching |
-| **Transformation** | ❌ Not yet implemented | ✅ Full control |
-| **Performance** | ✅ During decompilation | ⚠️ After export |
-| **Maintenance** | ⚠️ Requires Java builds | ✅ Simple Python |
-| **Success Rate** | 🔄 TBD | ✅ 99.8% proven |
-
 ## Contributing
 
 To contribute enhancements:
@@ -253,6 +243,6 @@ Apache License 2.0 (matches Ghidra)
 
 ## See Also
 
-- [GHIDRA_NATIVE_VS_POSTPROCESSING.md](../../../docs/GHIDRA_NATIVE_VS_POSTPROCESSING.md) - Comparison analysis
+- [JAVA_EXTENSION_IMPLEMENTATION.md](../../../docs/JAVA_EXTENSION_IMPLEMENTATION.md) - Implementation details
 - [Ghidra Extension Development](https://htmlpreview.github.io/?https://github.com/NationalSecurityAgency/ghidra/blob/master/GhidraDocs/GhidraClass/Intermediate/Extending_The_Decompiler.html)
 - [Pcode Reference](https://ghidra.re/ghidra_docs/api/ghidra/program/model/pcode/PcodeOp.html)
