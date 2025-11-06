@@ -82,8 +82,9 @@ echo "Running in unattended mode (no GUI)..."
 echo "This may take 15-30 minutes..."
 echo ""
 
-# Install vstools2019 in unattended mode
-winetricks --unattended vstools2019
+# Install vstools2019 in unattended mode with --force to bypass SHA256 checks
+# Microsoft frequently updates installers, causing hash mismatches
+winetricks --unattended --force vstools2019
 
 echo ""
 echo "Installation complete. Waiting for processes to settle..."
