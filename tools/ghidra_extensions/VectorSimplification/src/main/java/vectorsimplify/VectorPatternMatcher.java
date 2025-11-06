@@ -172,8 +172,15 @@ public class VectorPatternMatcher {
 		Varnode operand1 = op.getInput(0);
 		Varnode operand2 = op.getInput(1);
 
+		System.err.println("\nmatchEmptyPattern checking INT_EQUAL:");
+		System.err.println("  operand1: " + operand1);
+		System.err.println("  operand2: " + operand2);
+
 		VectorMember member1 = identifyVectorMember(operand1);
 		VectorMember member2 = identifyVectorMember(operand2);
+
+		System.err.println("  member1: " + (member1 != null ? member1.type + " base=" + member1.baseVarnode : "null"));
+		System.err.println("  member2: " + (member2 != null ? member2.type + " base=" + member2.baseVarnode : "null"));
 
 		if (member1 != null && member2 != null) {
 			// Check if comparing first and last
@@ -182,8 +189,16 @@ public class VectorPatternMatcher {
 				(member1.type == VectorMemberType.MYLAST &&
 					member2.type == VectorMemberType.MYFIRST);
 
-			if (isEmptyCheck && isSameVectorBase(member1.baseVarnode, member2.baseVarnode)) {
-				return new VectorPattern(VectorPatternType.EMPTY, op, member1.baseVarnode, 0);
+			System.err.println("  isEmptyCheck: " + isEmptyCheck);
+
+			if (isEmptyCheck) {
+				boolean sameBase = isSameVectorBase(member1.baseVarnode, member2.baseVarnode);
+				System.err.println("  sameBase: " + sameBase);
+
+				if (sameBase) {
+					System.err.println("  >>> MATCHED EMPTY PATTERN! <<<");
+					return new VectorPattern(VectorPatternType.EMPTY, op, member1.baseVarnode, 0);
+				}
 			}
 		}
 
@@ -255,7 +270,9 @@ public class VectorPatternMatcher {
 					if (memberType != null) {
 						Varnode sourceVar = traceToSourceVariable(baseVarnode);
 						if (sourceVar != null && isVectorType(sourceVar)) {
-							return new VectorMember(memberType, baseVarnode);
+							// Store the source variable, not the intermediate PTRSUB result
+							// This allows isSameVectorBase() to work correctly
+							return new VectorMember(memberType, sourceVar);
 						}
 					}
 				}
@@ -294,14 +311,17 @@ public class VectorPatternMatcher {
 							}
 
 							if (memberType != null) {
-								// Check if baseVarnode has vector type
+								// Trace back to source variable
+								Varnode sourceVar = traceToSourceVariable(baseVarnode);
 								System.err.println("LOAD: memberType=" + memberType + " offset=0x" + Long.toHexString(offset));
 								System.err.println("LOAD: base=" + baseVarnode);
-								boolean isVec = isVectorType(baseVarnode);
+								System.err.println("LOAD: source=" + sourceVar);
+								boolean isVec = (sourceVar != null && isVectorType(sourceVar));
 								System.err.println("LOAD: isVector=" + isVec);
 								if (isVec) {
 									System.err.println(">>> FOUND VECTOR MEMBER VIA LOAD! <<<");
-									return new VectorMember(memberType, baseVarnode);
+									// Store the source variable, not the intermediate base
+									return new VectorMember(memberType, sourceVar);
 								}
 							}
 						}
@@ -330,22 +350,39 @@ public class VectorPatternMatcher {
 		// Limit depth to prevent infinite loops
 		int maxDepth = 20;
 		Varnode current = varnode;
+		Varnode bestSoFar = varnode; // Track the best candidate
+		Varnode withTypeInfo = null; // Track varnode with type info
+
+		System.err.println("  trace from: " + varnode);
 
 		for (int depth = 0; depth < maxDepth; depth++) {
-			// If this varnode has vector type info, we found it!
-			if (hasVectorTypeInfo(current)) {
-				return current;
+			System.err.println("    [" + depth + "] " + current);
+
+			// Save if this varnode has vector type info
+			boolean hasTypeInfo = hasVectorTypeInfo(current);
+			System.err.println("      hasVectorTypeInfo=" + hasTypeInfo);
+			if (hasTypeInfo && withTypeInfo == null) {
+				withTypeInfo = current;
+				System.err.println("      saved withTypeInfo");
 			}
 
-			// If it's a free varnode (parameter, local variable), stop here
-			if (current.isFree() || current.isInput()) {
-				return current;
+			// If it's a free varnode (parameter, local variable), this is best!
+			boolean isFreeOrInput = current.isFree() || current.isInput();
+			System.err.println("      isFree/isInput=" + isFreeOrInput);
+			if (isFreeOrInput) {
+				bestSoFar = current;
+				System.err.println("      saved as bestSoFar - this is a source variable!");
+				// Found the source variable - return it (prefer this over type info)
+				System.err.println("      returning source variable");
+				return bestSoFar;
 			}
 
 			PcodeOp defOp = current.getDef();
+			System.err.println("      defOp=" + (defOp != null ? defOp.getMnemonic() : "null"));
 			if (defOp == null) {
-				// No definition - this is as far as we can trace
-				return current;
+				// No definition - return best we found
+				System.err.println("      no def - returning: " + bestSoFar);
+				return bestSoFar;
 			}
 
 			int opcode = defOp.getOpcode();
@@ -374,10 +411,16 @@ public class VectorPatternMatcher {
 			}
 
 			// Can't trace further
-			return current;
+			// Return varnode with type info if we found one, otherwise original
+			Varnode result = (withTypeInfo != null) ? withTypeInfo : bestSoFar;
+			System.err.println("  trace result (can't trace further): " + result);
+			return result;
 		}
 
-		return current;
+		// Hit max depth - return varnode with type info if we found one
+		Varnode result = (withTypeInfo != null) ? withTypeInfo : bestSoFar;
+		System.err.println("  trace result (max depth): " + result);
+		return result;
 	}
 
 	/**
