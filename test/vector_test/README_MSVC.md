@@ -91,7 +91,7 @@ ls -lh vector_test_msvc.pdb
 ## Testing with Ghidra
 
 ```bash
-/root/tools/ghidra/support/analyzeHeadless \
+$GHIDRA_INSTALL_DIR/support/analyzeHeadless \
     . VectorTestMSVC \
     -import vector_test_msvc.exe \
     -scriptPath . \

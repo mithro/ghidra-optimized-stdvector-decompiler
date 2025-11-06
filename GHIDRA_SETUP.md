@@ -34,13 +34,13 @@ If you prefer manual installation:
 Download Ghidra 11.4.2 from:
 https://github.com/NationalSecurityAgency/ghidra/releases
 
-Extract to `/root/tools/ghidra/` (or set `GHIDRA_INSTALL_DIR`)
+Extract to `$HOME/tools/ghidra/` (or set `GHIDRA_INSTALL_DIR`)
 
 ### 2. Build VectorSimplification Extension
 
 ```bash
 cd tools/ghidra_extensions/VectorSimplification
-export GHIDRA_INSTALL_DIR=/root/tools/ghidra
+export GHIDRA_INSTALL_DIR=$HOME/tools/ghidra
 bash build.sh
 ```
 
@@ -74,7 +74,7 @@ cp build/libs/VectorSimplification.jar $GHIDRA_INSTALL_DIR/Ghidra/Features/Decom
 
 ### Environment Variables
 
-- `GHIDRA_INSTALL_DIR`: Ghidra installation directory (default: `/root/tools/ghidra`)
+- `GHIDRA_INSTALL_DIR`: Ghidra installation directory (default: `$HOME/tools/ghidra`)
 - `GHIDRA_VERSION`: Ghidra version to install (default: `11.4.2`)
 - `GHIDRA_RELEASE`: Release build date (default: `20250826`)
 

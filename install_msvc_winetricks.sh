@@ -155,8 +155,9 @@ if [ -f "vector_test_msvc.exe" ] && [ -f "vector_test_msvc.pdb" ]; then
     echo "Testing with Ghidra..."
     cd "$SCRIPT_DIR"
 
-    if [ -f "/root/tools/ghidra/support/analyzeHeadless" ]; then
-        /root/tools/ghidra/support/analyzeHeadless \
+    GHIDRA_DIR="${GHIDRA_INSTALL_DIR:-$HOME/tools/ghidra}"
+    if [ -f "$GHIDRA_DIR/support/analyzeHeadless" ]; then
+        "$GHIDRA_DIR/support/analyzeHeadless" \
             "$TEST_DIR" VectorTestMSVC \
             -import "$TEST_DIR/vector_test_msvc.exe" \
             -overwrite \
