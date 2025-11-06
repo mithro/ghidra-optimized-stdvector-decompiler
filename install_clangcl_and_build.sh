@@ -31,11 +31,41 @@ echo "[1/4] Installing LLVM and clang..."
 if ! command -v clang-cl &> /dev/null; then
     echo "Installing LLVM toolchain..."
 
-    # Add LLVM repository
-    wget https://apt.llvm.org/llvm.sh
-    chmod +x llvm.sh
-    sudo ./llvm.sh 18
-    rm llvm.sh
+    # Detect OS for appropriate installation method
+    if [ -f /etc/os-release ]; then
+        . /etc/os-release
+
+        if [ "$ID" = "debian" ]; then
+            echo "Detected Debian $VERSION_CODENAME"
+            # Debian trixie has LLVM 18 in repos, but we'll use apt.llvm.org for latest
+            echo "Using apt.llvm.org LLVM repository..."
+
+            # Download and run llvm.sh (supports Debian)
+            wget https://apt.llvm.org/llvm.sh
+            chmod +x llvm.sh
+            sudo ./llvm.sh 18
+            rm llvm.sh
+
+        elif [ "$ID" = "ubuntu" ]; then
+            echo "Detected Ubuntu"
+            echo "Using apt.llvm.org LLVM repository..."
+
+            # Download and run llvm.sh (supports Ubuntu)
+            wget https://apt.llvm.org/llvm.sh
+            chmod +x llvm.sh
+            sudo ./llvm.sh 18
+            rm llvm.sh
+
+        else
+            echo "ERROR: Unsupported OS: $ID"
+            echo "This script only supports Debian and Ubuntu."
+            echo "Please install LLVM/clang manually and try again."
+            exit 1
+        fi
+    else
+        echo "ERROR: Cannot detect OS (/etc/os-release not found)"
+        exit 1
+    fi
 
     # Install clang and lld
     sudo apt-get install -y clang-18 lld-18 llvm-18
