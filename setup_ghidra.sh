@@ -1,0 +1,260 @@
+#!/bin/bash
+# Comprehensive Ghidra setup script
+# Sets up Ghidra installation, all modules, and custom VectorSimplification extension
+
+set -euo pipefail
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Configuration
+GHIDRA_VERSION="${GHIDRA_VERSION:-11.4.2}"
+GHIDRA_RELEASE="${GHIDRA_RELEASE:-20250826}"
+GHIDRA_INSTALL_DIR="${GHIDRA_INSTALL_DIR:-/root/tools/ghidra}"
+GHIDRA_URL="https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_${GHIDRA_VERSION}_build/ghidra_${GHIDRA_VERSION}_PUBLIC_${GHIDRA_RELEASE}.zip"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+echo -e "${BLUE}========================================================================${NC}"
+echo -e "${BLUE}                    Ghidra Setup Script${NC}"
+echo -e "${BLUE}========================================================================${NC}"
+echo ""
+
+# Function to print status messages
+print_status() {
+    echo -e "${GREEN}✓${NC} $1"
+}
+
+print_warning() {
+    echo -e "${YELLOW}⚠${NC} $1"
+}
+
+print_error() {
+    echo -e "${RED}✗${NC} $1"
+}
+
+print_info() {
+    echo -e "${BLUE}ℹ${NC} $1"
+}
+
+# Check if running as root
+if [ "$EUID" -ne 0 ]; then
+    print_warning "Not running as root. Some operations may require sudo."
+fi
+
+# Step 1: Check for Ghidra installation
+echo ""
+echo -e "${BLUE}Step 1: Checking Ghidra installation...${NC}"
+if [ -d "$GHIDRA_INSTALL_DIR" ] && [ -f "$GHIDRA_INSTALL_DIR/ghidraRun" ]; then
+    print_status "Ghidra found at: $GHIDRA_INSTALL_DIR"
+    GHIDRA_EXISTS=true
+else
+    print_warning "Ghidra not found at: $GHIDRA_INSTALL_DIR"
+    GHIDRA_EXISTS=false
+fi
+
+# Step 2: Install Ghidra if needed
+if [ "$GHIDRA_EXISTS" = false ]; then
+    echo ""
+    echo -e "${BLUE}Step 2: Installing Ghidra ${GHIDRA_VERSION}...${NC}"
+
+    # Check if user wants to install
+    if [ -t 0 ]; then
+        read -p "Do you want to download and install Ghidra? (y/n) " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            print_error "Ghidra installation required. Exiting."
+            exit 1
+        fi
+    fi
+
+    # Create installation directory
+    mkdir -p "$(dirname "$GHIDRA_INSTALL_DIR")"
+
+    # Download Ghidra
+    print_info "Downloading Ghidra ${GHIDRA_VERSION}..."
+    TEMP_ZIP="/tmp/ghidra_${GHIDRA_VERSION}.zip"
+
+    if command -v wget &> /dev/null; then
+        wget -O "$TEMP_ZIP" "$GHIDRA_URL"
+    elif command -v curl &> /dev/null; then
+        curl -L -o "$TEMP_ZIP" "$GHIDRA_URL"
+    else
+        print_error "Neither wget nor curl found. Please install one and try again."
+        exit 1
+    fi
+
+    # Extract Ghidra
+    print_info "Extracting Ghidra..."
+    unzip -q "$TEMP_ZIP" -d "$(dirname "$GHIDRA_INSTALL_DIR")"
+
+    # Rename to expected directory
+    EXTRACTED_DIR="$(dirname "$GHIDRA_INSTALL_DIR")/ghidra_${GHIDRA_VERSION}_PUBLIC"
+    if [ -d "$EXTRACTED_DIR" ] && [ "$EXTRACTED_DIR" != "$GHIDRA_INSTALL_DIR" ]; then
+        mv "$EXTRACTED_DIR" "$GHIDRA_INSTALL_DIR"
+    fi
+
+    # Cleanup
+    rm -f "$TEMP_ZIP"
+
+    print_status "Ghidra ${GHIDRA_VERSION} installed successfully"
+else
+    echo ""
+    echo -e "${BLUE}Step 2: Ghidra already installed (skipping)${NC}"
+fi
+
+# Step 3: Check Java installation
+echo ""
+echo -e "${BLUE}Step 3: Checking Java installation...${NC}"
+if command -v java &> /dev/null; then
+    JAVA_VERSION=$(java -version 2>&1 | head -n 1 | cut -d'"' -f2)
+    print_status "Java found: $JAVA_VERSION"
+else
+    print_error "Java not found. Ghidra requires Java 17 or later."
+    print_info "Install with: sudo apt-get install openjdk-21-jdk"
+    exit 1
+fi
+
+# Step 4: Create user directories
+echo ""
+echo -e "${BLUE}Step 4: Setting up Ghidra user directories...${NC}"
+GHIDRA_USER_DIR="$HOME/.ghidra/.ghidra_${GHIDRA_VERSION}_PUBLIC"
+mkdir -p "$GHIDRA_USER_DIR/Extensions"
+mkdir -p "$GHIDRA_USER_DIR/ghidra_scripts"
+print_status "User directories created"
+
+# Step 5: Build VectorSimplification extension
+echo ""
+echo -e "${BLUE}Step 5: Building VectorSimplification extension...${NC}"
+EXTENSION_DIR="$SCRIPT_DIR/tools/ghidra_extensions/VectorSimplification"
+
+if [ ! -d "$EXTENSION_DIR" ]; then
+    print_error "VectorSimplification extension not found at: $EXTENSION_DIR"
+    exit 1
+fi
+
+cd "$EXTENSION_DIR"
+print_info "Building extension..."
+
+# Set GHIDRA_INSTALL_DIR for build
+export GHIDRA_INSTALL_DIR
+
+if [ -f "build.sh" ]; then
+    bash build.sh
+else
+    gradle -PGHIDRA_INSTALL_DIR="$GHIDRA_INSTALL_DIR" clean buildExtension
+fi
+
+print_status "Extension built successfully"
+
+# Step 6: Install VectorSimplification extension
+echo ""
+echo -e "${BLUE}Step 6: Installing VectorSimplification extension...${NC}"
+
+# Find the latest built extension
+DIST_FILE=$(ls -t "$EXTENSION_DIR/dist"/*.zip 2>/dev/null | head -1)
+
+if [ -z "$DIST_FILE" ]; then
+    print_error "No extension package found in $EXTENSION_DIR/dist/"
+    exit 1
+fi
+
+print_info "Found extension package: $(basename "$DIST_FILE")"
+
+# Install to Ghidra system extensions
+SYSTEM_EXT_DIR="$GHIDRA_INSTALL_DIR/Extensions/Ghidra"
+mkdir -p "$SYSTEM_EXT_DIR"
+
+print_info "Extracting to system extensions directory..."
+unzip -q -o "$DIST_FILE" -d "$SYSTEM_EXT_DIR/"
+
+# Also copy JAR to Decompiler lib for headless mode
+JAR_FILE="$EXTENSION_DIR/build/libs/VectorSimplification.jar"
+if [ -f "$JAR_FILE" ]; then
+    DECOMPILER_LIB="$GHIDRA_INSTALL_DIR/Ghidra/Features/Decompiler/lib"
+    if [ -d "$DECOMPILER_LIB" ]; then
+        print_info "Installing JAR for headless mode..."
+        cp "$JAR_FILE" "$DECOMPILER_LIB/"
+        print_status "JAR installed to Decompiler lib"
+    fi
+fi
+
+print_status "VectorSimplification extension installed"
+
+# Step 7: Install optional plugins
+echo ""
+echo -e "${BLUE}Step 7: Checking for optional plugins...${NC}"
+
+PLUGIN_DIR="$SCRIPT_DIR/tools/plugin_installers"
+if [ -d "$PLUGIN_DIR" ]; then
+    PLUGIN_COUNT=0
+    for plugin in "$PLUGIN_DIR"/*; do
+        if [ -d "$plugin" ]; then
+            PLUGIN_NAME=$(basename "$plugin")
+            INSTALL_SCRIPT="$plugin/install_${PLUGIN_NAME}.sh"
+            if [ -f "$INSTALL_SCRIPT" ]; then
+                ((PLUGIN_COUNT++))
+                print_info "Found plugin: $PLUGIN_NAME"
+            fi
+        fi
+    done
+
+    if [ $PLUGIN_COUNT -gt 0 ]; then
+        print_info "Found $PLUGIN_COUNT optional plugin(s)"
+        print_info "Run individual install scripts in: $PLUGIN_DIR"
+    fi
+else
+    print_info "No optional plugins directory found"
+fi
+
+# Step 8: Verification
+echo ""
+echo -e "${BLUE}Step 8: Verifying installation...${NC}"
+
+# Check if extension directory exists
+if [ -d "$SYSTEM_EXT_DIR/VectorSimplification" ]; then
+    print_status "VectorSimplification directory found"
+else
+    print_warning "VectorSimplification directory not found"
+fi
+
+# Check if JAR exists
+if [ -f "$DECOMPILER_LIB/VectorSimplification.jar" ]; then
+    print_status "VectorSimplification JAR installed"
+else
+    print_warning "VectorSimplification JAR not found in Decompiler lib"
+fi
+
+# Check Module.manifest
+MANIFEST="$SYSTEM_EXT_DIR/VectorSimplification/Module.manifest"
+if [ -f "$MANIFEST" ]; then
+    print_status "Module.manifest found"
+else
+    print_warning "Module.manifest not found"
+fi
+
+# Step 9: Summary
+echo ""
+echo -e "${BLUE}========================================================================${NC}"
+echo -e "${GREEN}                    Setup Complete!${NC}"
+echo -e "${BLUE}========================================================================${NC}"
+echo ""
+echo "Ghidra installation: $GHIDRA_INSTALL_DIR"
+echo "Extension installed: VectorSimplification"
+echo ""
+echo -e "${YELLOW}Next steps:${NC}"
+echo "  1. Start Ghidra: $GHIDRA_INSTALL_DIR/ghidraRun"
+echo "  2. Enable extension: File → Configure → Check 'VectorSimplification'"
+echo "  3. Restart Ghidra for changes to take effect"
+echo ""
+echo -e "${YELLOW}For headless analysis:${NC}"
+echo "  $GHIDRA_INSTALL_DIR/support/analyzeHeadless <project> <name> -import <binary>"
+echo ""
+echo -e "${YELLOW}Test the extension:${NC}"
+echo "  cd $SCRIPT_DIR/test/vector_test"
+echo "  python test_transformation.py"
+echo ""
+echo -e "${BLUE}========================================================================${NC}"
