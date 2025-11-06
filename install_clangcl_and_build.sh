@@ -66,7 +66,27 @@ echo "[3/4] Downloading MSVC SDK and runtime libraries..."
 XWIN_DIR="$HOME/.xwin"
 if [ ! -d "$XWIN_DIR/crt" ]; then
     echo "Downloading Windows SDK and MSVC libraries (this may take a few minutes)..."
-    xwin --accept-license splat --output "$XWIN_DIR"
+
+    # Download manifest with curl first (works around rustls SSL cert issues)
+    mkdir -p ~/.xwin-cache
+    if [ ! -f ~/.xwin-cache/manifest.json ]; then
+        echo "Downloading VS manifest with curl..."
+        curl -L -o ~/.xwin-cache/manifest.json https://aka.ms/vs/17/release/channel
+    fi
+
+    # Try to use xwin with the local manifest
+    # Note: May still have SSL issues downloading component files
+    # If this fails, try running on a machine with proper SSL certs
+    xwin --accept-license --manifest ~/.xwin-cache/manifest.json splat --output "$XWIN_DIR" || {
+        echo ""
+        echo "ERROR: xwin download failed (likely SSL certificate issue)"
+        echo ""
+        echo "This is a known issue in some container environments."
+        echo "Please try running this script on a regular Linux machine."
+        echo ""
+        echo "Alternative: Use ./install_msvc_wine.sh instead"
+        exit 1
+    }
 else
     echo "MSVC SDK already downloaded at $XWIN_DIR"
 fi
