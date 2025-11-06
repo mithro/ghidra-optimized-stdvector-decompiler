@@ -63,15 +63,35 @@ The Ghidra VectorSimplification extension specifically recognizes MSVC's std::ve
 
 ## Test Program
 
-The test program (`vector_test.cpp`) includes:
+The test program (`vector_test.cpp`) is a comprehensive test suite covering **all 10 pointer arithmetic patterns** found in production binaries. See `PATTERN_COVERAGE.md` for detailed analysis.
 
-- `GetVectorSize()` - Returns `vec.size()`
-- `IsVectorEmpty()` - Returns `vec.empty()`
-- `SumIfNotEmpty()` - Iterates through vector and sums elements
-- `GetVectorData()` - Returns `vec.data()`
-- `main()` - Creates a vector and calls all test functions
+### Test Functions (18 functions total):
 
-Each function demonstrates different std::vector operations that the Ghidra extension should simplify.
+**Basic Operations:**
+- `TestVectorSize()` - Size calculation: `(field_0x10 - field_0x8) >> 2`
+- `TestVectorEmpty()` - Empty check: `field_0x10 == field_0x8`
+- `TestVectorData()` - Data pointer: `field_0x8`
+- `TestVectorCapacity()` - Capacity: `(field_0x18 - field_0x8) >> 2`
+
+**Modifying Operations:**
+- `TestVectorReserve()` - Capacity checks and reallocation
+- `TestVectorResize()` - Size and capacity checks
+- `TestVectorPushBack()` - Field increment: `field_0x10 += 4`
+- `TestVectorPopBack()` - Field decrement: `field_0x10 -= 4`
+- `TestVectorClear()` - Field assignment: `field_0x10 = field_0x8`
+
+**Advanced Operations:**
+- `TestVectorIndexing()` - Pointer arithmetic: `*(field_0x8 + index * 4)`
+- `TestVectorIterators()` - begin()/end() with pointer arithmetic
+- `TestVectorFront()` - `*field_0x8`
+- `TestVectorBack()` - `*(field_0x10 - 4)`
+- `TestVectorShrinkToFit()` - Field_0x18 adjustment
+- `TestVectorSwap()` - Field-to-field copy
+- `TestVectorAssignment()` - Multiple field operations
+- `TestComplexOperations()` - Combines multiple patterns
+- `TestNestedVectorAccess()` - Struct with vector field
+
+Each function triggers specific decompilation patterns that match optimized binary's real-world code.
 
 ## Testing with Ghidra
 
@@ -79,19 +99,30 @@ After building, the binary can be analyzed in Ghidra with the VectorSimplificati
 
 ## Verification Results
 
-The optimized binary has been verified to match production binaries's decompilation patterns. See `OPTIMIZED_BUILD_RESULTS.md` for detailed verification results.
+The comprehensive test binary has been verified to contain **all 10 pointer arithmetic patterns** found in production binaries. See `PATTERN_COVERAGE.md` for detailed pattern-by-pattern analysis.
 
-**Key findings:**
-- ✓ Raw pointer arithmetic detected in decompiled code
-- ✓ Vector size calculation: `(vec._Mylast - vec._Myfirst) >> 2`
-- ✓ Capacity check: `(vec._Myend - vec._Myfirst)`
-- ✓ Functionally equivalent to optimized binary's `field_0x8`/`field_0x10`/`field_0x18` patterns
-- ✓ Binary size reduced 40% (27KB → 16KB) due to optimizations
+**Pattern Coverage Summary:**
+- ✓ Size calculation: `(field_0x10 - field_0x8) >> 2` (5 functions)
+- ✓ Capacity calculation: `(field_0x18 - field_0x8)` (7 functions)
+- ✓ Empty check: `field_0x10 == field_0x8` (7 functions)
+- ✓ Capacity check: `field_0x18 == field_0x10` (7 functions)
+- ✓ Field assignments: `field_0x8/0x10/0x18 = ptr` (_Emplace_reallocate)
+- ✓ Field increment: `field_0x10 += element_size` (TestComplexOperations)
+- ✓ Pointer arithmetic: `ptr + offset` (_Emplace_reallocate)
+- ✓ Index calculation: `(ptr - field_0x8) / element_size` (_Emplace_reallocate)
+- ✓ Direct data access: `*field_0x8` (TestComplexOperations)
+- ✓ Field-to-field copy: `field_0x10 = field_0x8` (clear operations)
 
-**Test scripts included:**
+**Total: 26 pattern instances across 7 core functions**
+
+**Analysis scripts included:**
+- `analyze_all_patterns.py` - Detects all pattern types in binary
+- `show_detailed_patterns.py` - Shows detailed decompilation
 - `check_main.py` - Analyzes main() decompilation patterns
 - `check_patterns.py` - Searches for field patterns in all functions
 - `list_functions.py` - Lists all functions in the binary
+
+See `OPTIMIZED_BUILD_RESULTS.md` for initial optimization verification.
 
 ## Alternative Build Methods
 
