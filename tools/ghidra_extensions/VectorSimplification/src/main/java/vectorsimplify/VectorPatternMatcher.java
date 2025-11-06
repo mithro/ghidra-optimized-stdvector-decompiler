@@ -74,6 +74,13 @@ public class VectorPatternMatcher {
 				continue;
 			}
 
+			// Check for capacity pattern
+			VectorPattern capacityPattern = matchCapacityPattern(op);
+			if (capacityPattern != null) {
+				patterns.add(capacityPattern);
+				continue;
+			}
+
 			// Check for empty pattern
 			VectorPattern emptyPattern = matchEmptyPattern(op);
 			if (emptyPattern != null) {
@@ -81,8 +88,9 @@ public class VectorPatternMatcher {
 				continue;
 			}
 
-			// TODO: DATA pattern needs refinement to avoid false positives
-			// Currently disabled - simply accessing _Myfirst matches too broadly
+			// TODO: DATA pattern disabled - too aggressive
+			// Matches every load of _Myfirst, including iterator assignments
+			// Need to distinguish actual data() calls from internal pointer manipulation
 			// VectorPattern dataPattern = matchDataPattern(op);
 			// if (dataPattern != null) {
 			//     patterns.add(dataPattern);
@@ -167,6 +175,77 @@ public class VectorPatternMatcher {
 				System.err.println("  >>> MATCHED SIZE PATTERN! shift=" + shiftAmount);
 
 				return new VectorPattern(VectorPatternType.SIZE, op, mylast.baseVarnode,
+					shiftAmount);
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * Match pattern: (myend - myfirst) >> shift
+	 * Represents: vector.capacity()
+	 */
+	private VectorPattern matchCapacityPattern(PcodeOpAST op) {
+		// Look for INT_RIGHT or INT_SRIGHT (signed right shift)
+		if (op.getOpcode() != PcodeOp.INT_RIGHT && op.getOpcode() != PcodeOp.INT_SRIGHT) {
+			return null;
+		}
+
+		if (op.getNumInputs() < 2) {
+			return null;
+		}
+
+		System.err.println("\nmatchCapacityPattern checking shift:");
+		System.err.println("  shift op: " + op);
+
+		// Get the subtraction operation
+		Varnode subVarnode = op.getInput(0);
+		if (subVarnode == null) {
+			return null;
+		}
+
+		System.err.println("  sub varnode: " + subVarnode);
+
+		PcodeOp subOp = subVarnode.getDef();
+		System.err.println("  sub def: " + (subOp != null ? subOp.getMnemonic() : "null"));
+
+		if (subOp == null || subOp.getOpcode() != PcodeOp.INT_SUB) {
+			return null;
+		}
+
+		if (subOp.getNumInputs() < 2) {
+			return null;
+		}
+
+		// Check if operands are vector members
+		Varnode myendVarnode = subOp.getInput(0);
+		Varnode myfirstVarnode = subOp.getInput(1);
+
+		System.err.println("  checking operands:");
+		System.err.println("    operand 0: " + myendVarnode);
+		System.err.println("    operand 1: " + myfirstVarnode);
+
+		VectorMember myend = identifyVectorMember(myendVarnode);
+		VectorMember myfirst = identifyVectorMember(myfirstVarnode);
+
+		System.err.println("  myend: " + (myend != null ? myend.type + " base=" + myend.baseVarnode : "null"));
+		System.err.println("  myfirst: " + (myfirst != null ? myfirst.type + " base=" + myfirst.baseVarnode : "null"));
+
+		if (myend != null && myend.type == VectorMemberType.MYEND &&
+			myfirst != null && myfirst.type == VectorMemberType.MYFIRST) {
+
+			// Verify they're from the same vector
+			boolean sameBase = isSameVectorBase(myend.baseVarnode, myfirst.baseVarnode);
+			System.err.println("  sameBase: " + sameBase);
+
+			if (sameBase) {
+				// Get shift amount (element size)
+				Varnode shiftVarnode = op.getInput(1);
+				long shiftAmount = shiftVarnode.getOffset();
+				System.err.println("  >>> MATCHED CAPACITY PATTERN! shift=" + shiftAmount);
+
+				return new VectorPattern(VectorPatternType.CAPACITY, op, myend.baseVarnode,
 					shiftAmount);
 			}
 		}
