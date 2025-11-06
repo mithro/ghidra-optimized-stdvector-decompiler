@@ -81,11 +81,12 @@ public class VectorPatternMatcher {
 				continue;
 			}
 
-			// TODO: DATA pattern temporarily disabled for debugging
-			// Need to verify SIZE/EMPTY work correctly first
+			// TODO: DATA pattern needs refinement to avoid false positives
+			// Currently disabled - simply accessing _Myfirst matches too broadly
 			// VectorPattern dataPattern = matchDataPattern(op);
 			// if (dataPattern != null) {
 			//     patterns.add(dataPattern);
+			//     continue;
 			// }
 		}
 
@@ -107,8 +108,8 @@ public class VectorPatternMatcher {
 	 * Represents: vector.size()
 	 */
 	private VectorPattern matchSizePattern(PcodeOpAST op) {
-		// Look for INT_RIGHT (right shift)
-		if (op.getOpcode() != PcodeOp.INT_RIGHT) {
+		// Look for INT_RIGHT or INT_SRIGHT (signed right shift)
+		if (op.getOpcode() != PcodeOp.INT_RIGHT && op.getOpcode() != PcodeOp.INT_SRIGHT) {
 			return null;
 		}
 
@@ -116,13 +117,20 @@ public class VectorPatternMatcher {
 			return null;
 		}
 
+		System.err.println("\nmatchSizePattern checking shift:");
+		System.err.println("  shift op: " + op);
+
 		// Get the subtraction operation
 		Varnode subVarnode = op.getInput(0);
 		if (subVarnode == null) {
 			return null;
 		}
 
+		System.err.println("  sub varnode: " + subVarnode);
+
 		PcodeOp subOp = subVarnode.getDef();
+		System.err.println("  sub def: " + (subOp != null ? subOp.getMnemonic() : "null"));
+
 		if (subOp == null || subOp.getOpcode() != PcodeOp.INT_SUB) {
 			return null;
 		}
@@ -135,17 +143,28 @@ public class VectorPatternMatcher {
 		Varnode mylastVarnode = subOp.getInput(0);
 		Varnode myfirstVarnode = subOp.getInput(1);
 
+		System.err.println("  checking operands:");
+		System.err.println("    operand 0: " + mylastVarnode);
+		System.err.println("    operand 1: " + myfirstVarnode);
+
 		VectorMember mylast = identifyVectorMember(mylastVarnode);
 		VectorMember myfirst = identifyVectorMember(myfirstVarnode);
+
+		System.err.println("  mylast: " + (mylast != null ? mylast.type + " base=" + mylast.baseVarnode : "null"));
+		System.err.println("  myfirst: " + (myfirst != null ? myfirst.type + " base=" + myfirst.baseVarnode : "null"));
 
 		if (mylast != null && mylast.type == VectorMemberType.MYLAST &&
 			myfirst != null && myfirst.type == VectorMemberType.MYFIRST) {
 
 			// Verify they're from the same vector
-			if (isSameVectorBase(mylast.baseVarnode, myfirst.baseVarnode)) {
+			boolean sameBase = isSameVectorBase(mylast.baseVarnode, myfirst.baseVarnode);
+			System.err.println("  sameBase: " + sameBase);
+
+			if (sameBase) {
 				// Get shift amount (element size)
 				Varnode shiftVarnode = op.getInput(1);
 				long shiftAmount = shiftVarnode.getOffset();
+				System.err.println("  >>> MATCHED SIZE PATTERN! shift=" + shiftAmount);
 
 				return new VectorPattern(VectorPatternType.SIZE, op, mylast.baseVarnode,
 					shiftAmount);
@@ -242,6 +261,31 @@ public class VectorPatternMatcher {
 		System.err.println("  defOp: " + (defOp != null ? defOp.getMnemonic() : "null"));
 		if (defOp == null) {
 			return null;
+		}
+
+		// Trace through CAST and COPY operations
+		if (defOp.getOpcode() == PcodeOp.CAST || defOp.getOpcode() == PcodeOp.COPY) {
+			if (defOp.getNumInputs() > 0) {
+				System.err.println("  tracing through " + defOp.getMnemonic());
+				return identifyVectorMember(defOp.getInput(0));
+			}
+		}
+
+		// For MULTIEQUAL (PHI nodes), try the first input
+		// This handles cases where value comes from multiple control flow paths
+		if (defOp.getOpcode() == PcodeOp.MULTIEQUAL) {
+			if (defOp.getNumInputs() > 0) {
+				System.err.println("  tracing through MULTIEQUAL (trying first input)");
+				VectorMember result = identifyVectorMember(defOp.getInput(0));
+				if (result != null) {
+					return result;
+				}
+				// If first doesn't work, try second input
+				if (defOp.getNumInputs() > 1) {
+					System.err.println("  trying second MULTIEQUAL input");
+					return identifyVectorMember(defOp.getInput(1));
+				}
+			}
 		}
 
 		// Check for PTRSUB or PTRADD with vector member offset
