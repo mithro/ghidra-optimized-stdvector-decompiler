@@ -118,17 +118,32 @@ else
     exit 1
 fi
 
-# Step 4: Create user directories
+# Step 4: Check Gradle installation
 echo ""
-echo -e "${BLUE}Step 4: Setting up Ghidra user directories...${NC}"
+echo -e "${BLUE}Step 4: Checking Gradle installation...${NC}"
+if command -v gradle &> /dev/null; then
+    GRADLE_VERSION=$(gradle --version 2>&1 | grep "Gradle" | head -n 1)
+    print_status "Gradle found: $GRADLE_VERSION"
+elif [ -f "/opt/gradle/bin/gradle" ]; then
+    print_status "Gradle found at: /opt/gradle/bin/gradle"
+else
+    print_error "Gradle not found. Required for building the VectorSimplification extension."
+    print_info "Install with: sudo apt-get install gradle"
+    print_info "Or download from: https://gradle.org/releases/"
+    exit 1
+fi
+
+# Step 5: Create user directories
+echo ""
+echo -e "${BLUE}Step 5: Setting up Ghidra user directories...${NC}"
 GHIDRA_USER_DIR="$HOME/.ghidra/.ghidra_${GHIDRA_VERSION}_PUBLIC"
 mkdir -p "$GHIDRA_USER_DIR/Extensions"
 mkdir -p "$GHIDRA_USER_DIR/ghidra_scripts"
 print_status "User directories created"
 
-# Step 5: Build VectorSimplification extension
+# Step 6: Build VectorSimplification extension
 echo ""
-echo -e "${BLUE}Step 5: Building VectorSimplification extension...${NC}"
+echo -e "${BLUE}Step 6: Building VectorSimplification extension...${NC}"
 EXTENSION_DIR="$SCRIPT_DIR/tools/ghidra_extensions/VectorSimplification"
 
 if [ ! -d "$EXTENSION_DIR" ]; then
@@ -150,9 +165,9 @@ fi
 
 print_status "Extension built successfully"
 
-# Step 6: Install VectorSimplification extension
+# Step 7: Install VectorSimplification extension
 echo ""
-echo -e "${BLUE}Step 6: Installing VectorSimplification extension...${NC}"
+echo -e "${BLUE}Step 7: Installing VectorSimplification extension...${NC}"
 
 # Find the latest built extension
 DIST_FILE=$(ls -t "$EXTENSION_DIR/dist"/*.zip 2>/dev/null | head -1)
@@ -184,9 +199,9 @@ fi
 
 print_status "VectorSimplification extension installed"
 
-# Step 7: Install optional plugins
+# Step 8: Install optional plugins
 echo ""
-echo -e "${BLUE}Step 7: Checking for optional plugins...${NC}"
+echo -e "${BLUE}Step 8: Checking for optional plugins...${NC}"
 
 PLUGIN_DIR="$SCRIPT_DIR/tools/plugin_installers"
 if [ -d "$PLUGIN_DIR" ]; then
@@ -210,9 +225,9 @@ else
     print_info "No optional plugins directory found"
 fi
 
-# Step 8: Verification
+# Step 9: Verification
 echo ""
-echo -e "${BLUE}Step 8: Verifying installation...${NC}"
+echo -e "${BLUE}Step 9: Verifying installation...${NC}"
 
 # Check if extension directory exists
 if [ -d "$SYSTEM_EXT_DIR/VectorSimplification" ]; then
@@ -236,7 +251,7 @@ else
     print_warning "Module.manifest not found"
 fi
 
-# Step 9: Summary
+# Step 10: Summary
 echo ""
 echo -e "${BLUE}========================================================================${NC}"
 echo -e "${GREEN}                    Setup Complete!${NC}"
