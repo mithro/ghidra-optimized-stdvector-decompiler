@@ -288,16 +288,16 @@ public class ClangTokenRewriter {
 
         switch (pattern.getType()) {
             case SIZE:
-                output.append("(").append(vectorName).append(").size()");
+                output.append(vectorName).append("->size()");
                 break;
             case EMPTY:
-                output.append("(").append(vectorName).append(").empty()");
+                output.append(vectorName).append("->empty()");
                 break;
             case DATA:
-                output.append("(").append(vectorName).append(").data()");
+                output.append(vectorName).append("->data()");
                 break;
             case CAPACITY:
-                output.append("(").append(vectorName).append(").capacity()");
+                output.append(vectorName).append("->capacity()");
                 break;
             default:
                 output.append("/* unknown pattern */");
