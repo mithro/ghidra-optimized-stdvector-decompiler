@@ -89,7 +89,8 @@ echo "This may take 5-10 minutes..."
 
 if [ ! -f "$WINE_PREFIX/drive_c/windows/Microsoft.NET/Framework64/v4.0.30319/mscorlib.dll" ]; then
     echo "Installing dotnet48 via winetricks..."
-    winetricks -q dotnet48
+    # Use --force to bypass SHA256 checks (Microsoft updates packages frequently)
+    winetricks -q --force dotnet48
     echo "Waiting for .NET installation to settle..."
     sleep 10
 else
@@ -99,7 +100,8 @@ fi
 # Step 4: Install Visual C++ redistributables
 echo ""
 echo "[4/7] Installing Visual C++ redistributables..."
-winetricks -q vcrun2019
+# Use --force to bypass SHA256 checks (Microsoft updates packages frequently)
+winetricks -q --force vcrun2019
 
 # Step 5: Download Build Tools
 echo ""
