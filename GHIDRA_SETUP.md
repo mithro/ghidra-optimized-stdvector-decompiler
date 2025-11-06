@@ -21,7 +21,7 @@ This will:
 ## Requirements
 
 - **Java 17 or later**: `sudo apt-get install openjdk-21-jdk`
-- **Gradle** (included with the project)
+- **Gradle**: `sudo apt-get install gradle` (or download from https://gradle.org/releases/)
 - **wget** or **curl** (for downloading Ghidra if needed)
 - **unzip** (for extracting archives)
 
