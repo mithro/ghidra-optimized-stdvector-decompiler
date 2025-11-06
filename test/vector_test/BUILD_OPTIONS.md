@@ -11,13 +11,58 @@ The Ghidra VectorSimplification extension is designed to recognize MSVC's std::v
 
 GCC and other compilers use different layouts (e.g., `_M_start`, `_M_finish`, `_M_end_of_storage`), so we need MSVC or an MSVC-compatible compiler.
 
-## Option 1: Wine + MSVC Build Tools (Recommended but Complex)
+## Option 1: msvc-wine (RECOMMENDED)
+
+**Status**: Should work reliably. Downloads and unpacks MSVC without running installers.
+
+**Script**: `install_msvc_wine.sh`
+
+This approach uses the [msvc-wine](https://github.com/mstorsjo/msvc-wine) project which downloads and unpacks MSVC components directly from Microsoft's servers **without running the Visual Studio installer**. This avoids all Wine compatibility issues.
+
+**Pros**:
+- Doesn't rely on running installers in Wine
+- Downloads genuine MSVC components directly
+- Installs wrapper scripts for transparent usage
+- Well-maintained project specifically for this use case
+
+**Cons**:
+- Downloads 1-2GB of data
+- Requires msitools and libgcab packages
+
+**To use**:
+```bash
+cd ~/github/mithro/oni/decompiled
+./install_msvc_wine.sh
+```
+
+## Option 2: winetricks vstools2019
+
+**Status**: Should work better than manual installer.
+
+**Script**: `install_msvc_winetricks.sh`
+
+Uses winetricks' built-in `vstools2019` verb to install Visual Studio Build Tools 2019.
+
+**Pros**:
+- Uses winetricks' tested installation recipe
+- Simpler than manual installer approach
+
+**Cons**:
+- Still runs the VS installer in Wine (may have issues)
+- May show GUI dialogs requiring interaction
+
+**To use**:
+```bash
+./install_msvc_winetricks.sh
+```
+
+## Option 3: Wine + Manual MSVC Installer (Not Recommended)
 
 **Status**: Currently not working reliably in Wine.
 
 The installer completes but doesn't actually install cl.exe. This is a known Wine limitation with Visual Studio installers.
 
-**Script**: `install_msvc_and_build.sh`
+**Script**: `install_msvc_and_build.sh` (legacy)
 
 **Issue**: VS Build Tools installer returns success but doesn't install compiler:
 ```
@@ -32,7 +77,7 @@ ERROR: cl.exe not found after installation
 - Even with .NET Framework installed, the workload installers may fail silently
 - Wine's COM/DCOM implementation is incomplete
 
-## Option 2: clang-cl + xwin (Alternative, Easier)
+## Option 4: clang-cl + xwin (Alternative, Easier)
 
 **Status**: Should work, but requires Rust/Cargo.
 
@@ -57,7 +102,7 @@ chmod +x install_clangcl_and_build.sh
 ./install_clangcl_and_build.sh
 ```
 
-## Option 3: Compile on Windows (Simplest)
+## Option 5: Compile on Windows (Simplest)
 
 **Status**: Always works if you have Windows.
 
@@ -77,7 +122,7 @@ cl.exe /Zi /EHsc /std:c++17 /MD /Fe:vector_test_msvc.exe vector_test.cpp /link /
 
 Then copy `vector_test_msvc.exe` and `vector_test_msvc.pdb` back to the Linux machine.
 
-## Option 4: GitHub Actions (Automated)
+## Option 6: GitHub Actions (Automated)
 
 **Status**: Not yet implemented, but straightforward.
 
@@ -108,7 +153,7 @@ jobs:
             test/vector_test/vector_test_msvc.pdb
 ```
 
-## Option 5: MinGW-w64 Cross-Compiler (Not MSVC-Compatible)
+## Option 7: MinGW-w64 Cross-Compiler (Not MSVC-Compatible)
 
 **Status**: Easy to install but won't work for our purposes.
 
@@ -137,23 +182,43 @@ Our Ghidra extension specifically looks for offsets 0x8, 0x10, 0x18, so GCC bina
 
 **For Tim (or anyone with the failed Wine installation)**:
 
-1. **First**, run the diagnostic script to see what happened:
+### Best Option: msvc-wine (Option 1)
+
+This is the most reliable Linux-only approach:
+```bash
+cd ~/github/mithro/oni/decompiled
+git pull origin claude/review-decompiled-simdll-output-011CUpY1cdcN9aA4F6xpnSs6
+./install_msvc_wine.sh
+```
+
+**Why this is better**:
+- Doesn't run the problematic VS installer in Wine
+- Downloads genuine MSVC components directly
+- Specifically designed for this use case
+- Well-tested and maintained
+
+### Alternative Options (in order of preference):
+
+1. **Try winetricks vstools2019** (Option 2):
+   ```bash
+   ./install_msvc_winetricks.sh
+   ```
+   This uses winetricks' built-in recipe which may work better than the manual installer.
+
+2. **Compile on Windows** (Option 5):
+   If you have Windows access, this is the simplest and most reliable.
+
+3. **Use clang-cl** (Option 4):
+   ```bash
+   ./install_clangcl_and_build.sh
+   ```
+   Works but requires Rust/Cargo and downloads large MSVC SDK.
+
+4. **Diagnose the old installation**:
    ```bash
    ./check_wine_msvc.sh
    ```
-
-2. **Then**, try one of these approaches in order of preference:
-
-   a. **Easiest**: Compile on a Windows machine (Option 3) and copy the files back
-
-   b. **Automated**: Set up GitHub Actions (Option 4) to build automatically
-
-   c. **Linux-only**: Try the clang-cl approach (Option 2):
-      ```bash
-      ./install_clangcl_and_build.sh
-      ```
-
-3. **Last resort**: Debug the Wine installation further (may not be worth the effort)
+   Only useful for debugging - not recommended for actually fixing it.
 
 ## Testing After Build
 
