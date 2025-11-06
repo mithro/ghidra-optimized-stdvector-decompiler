@@ -23,15 +23,49 @@ public class VectorPatternMatcher {
 	private static final long OFFSET_MYEND = 0x10;   // End of capacity pointer
 
 	/**
+	 * Simple test method to verify the class is being loaded correctly.
+	 */
+	public void testMethod() {
+		try {
+			java.io.FileWriter fw = new java.io.FileWriter("/tmp/patternmatcher_test.txt", true);
+			fw.write("testMethod() was called at " + System.currentTimeMillis() + "\n");
+			fw.close();
+		} catch (Exception e) {
+			System.err.println("ERROR in testMethod: " + e.getMessage());
+			e.printStackTrace();
+		}
+	}
+
+	/**
 	 * Find all vector patterns in a high function.
 	 */
 	public List<VectorPattern> findVectorPatterns(HighFunction highFunc) {
+		System.err.println("=== findVectorPatterns ENTERED ===");
+		System.err.flush();
+
+		// Write to file to prove this method is called
+		try {
+			java.io.FileWriter fw = new java.io.FileWriter("/tmp/vector_matcher_called.txt", true);
+			fw.write("findVectorPatterns CALLED at " + System.currentTimeMillis() + "\n");
+			fw.close();
+		} catch (Exception e) {
+			System.err.println("ERROR writing to log file: " + e.getMessage());
+			e.printStackTrace();
+		}
+
 		List<VectorPattern> patterns = new ArrayList<>();
 
 		// Iterate through all pcode ops
 		Iterator<PcodeOpAST> ops = highFunc.getPcodeOps();
+		int opCount = 0;
+		int equalCount = 0;
 		while (ops.hasNext()) {
 			PcodeOpAST op = ops.next();
+			opCount++;
+
+			if (op.getOpcode() == PcodeOp.INT_EQUAL) {
+				equalCount++;
+			}
 
 			// Check for size pattern
 			VectorPattern sizePattern = matchSizePattern(op);
@@ -53,6 +87,16 @@ public class VectorPatternMatcher {
 			// if (dataPattern != null) {
 			//     patterns.add(dataPattern);
 			// }
+		}
+
+		// Write results to file
+		try {
+			java.io.FileWriter fw = new java.io.FileWriter("/tmp/vector_matcher_called.txt", true);
+			fw.write("Processed " + opCount + " ops, " + equalCount + " INT_EQUAL, found " + patterns.size() + " patterns\n");
+			fw.close();
+		} catch (Exception e) {
+			System.err.println("ERROR writing results to log file: " + e.getMessage());
+			e.printStackTrace();
 		}
 
 		return patterns;
