@@ -40,10 +40,96 @@ print_info() {
     echo -e "${BLUE}ℹ${NC} $1"
 }
 
+# Detect package manager
+detect_package_manager() {
+    if command -v apt-get &> /dev/null; then
+        echo "apt-get"
+    elif command -v dnf &> /dev/null; then
+        echo "dnf"
+    elif command -v yum &> /dev/null; then
+        echo "yum"
+    elif command -v pacman &> /dev/null; then
+        echo "pacman"
+    else
+        echo "unknown"
+    fi
+}
+
+PKG_MANAGER=$(detect_package_manager)
+
+# Function to install package
+install_package() {
+    local package=$1
+    local install_name=${2:-$package}  # Allow different install name
+
+    print_info "Attempting to install $package..."
+
+    case $PKG_MANAGER in
+        apt-get)
+            sudo apt-get update && sudo apt-get install -y "$install_name"
+            ;;
+        dnf)
+            sudo dnf install -y "$install_name"
+            ;;
+        yum)
+            sudo yum install -y "$install_name"
+            ;;
+        pacman)
+            sudo pacman -S --noconfirm "$install_name"
+            ;;
+        *)
+            print_error "Unknown package manager. Please install $package manually."
+            return 1
+            ;;
+    esac
+}
+
 # Check if running as root
 if [ "$EUID" -ne 0 ]; then
     print_warning "Not running as root. Some operations may require sudo."
 fi
+
+# Step 0: Check for basic tools (wget/curl, unzip)
+echo ""
+echo -e "${BLUE}Step 0: Checking basic dependencies...${NC}"
+
+# Check for wget or curl
+if ! command -v wget &> /dev/null && ! command -v curl &> /dev/null; then
+    print_warning "Neither wget nor curl found."
+    if [ -t 0 ]; then
+        read -p "Install wget? (y/n) " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            install_package "wget" "wget" || exit 1
+        else
+            print_error "wget or curl required for downloading files. Exiting."
+            exit 1
+        fi
+    else
+        print_error "wget or curl required. Please install and try again."
+        exit 1
+    fi
+fi
+
+# Check for unzip
+if ! command -v unzip &> /dev/null; then
+    print_warning "unzip not found."
+    if [ -t 0 ]; then
+        read -p "Install unzip? (y/n) " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            install_package "unzip" "unzip" || exit 1
+        else
+            print_error "unzip required for extracting archives. Exiting."
+            exit 1
+        fi
+    else
+        print_error "unzip required. Please install and try again."
+        exit 1
+    fi
+fi
+
+print_status "Basic dependencies satisfied"
 
 # Step 1: Check for Ghidra installation
 echo ""
@@ -113,9 +199,44 @@ if command -v java &> /dev/null; then
     JAVA_VERSION=$(java -version 2>&1 | head -n 1 | cut -d'"' -f2)
     print_status "Java found: $JAVA_VERSION"
 else
-    print_error "Java not found. Ghidra requires Java 17 or later."
-    print_info "Install with: sudo apt-get install openjdk-21-jdk"
-    exit 1
+    print_warning "Java not found. Ghidra requires Java 17 or later."
+
+    if [ -t 0 ]; then
+        read -p "Install OpenJDK 21? (y/n) " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            case $PKG_MANAGER in
+                apt-get)
+                    install_package "OpenJDK 21" "openjdk-21-jdk" || exit 1
+                    ;;
+                dnf|yum)
+                    install_package "OpenJDK 21" "java-21-openjdk-devel" || exit 1
+                    ;;
+                pacman)
+                    install_package "OpenJDK 21" "jdk21-openjdk" || exit 1
+                    ;;
+                *)
+                    print_error "Unable to auto-install. Please install Java 17+ manually."
+                    exit 1
+                    ;;
+            esac
+
+            # Verify installation
+            if command -v java &> /dev/null; then
+                JAVA_VERSION=$(java -version 2>&1 | head -n 1 | cut -d'"' -f2)
+                print_status "Java installed successfully: $JAVA_VERSION"
+            else
+                print_error "Java installation failed. Please install manually."
+                exit 1
+            fi
+        else
+            print_error "Java is required. Exiting."
+            exit 1
+        fi
+    else
+        print_error "Java required. Please install openjdk-21-jdk and try again."
+        exit 1
+    fi
 fi
 
 # Step 4: Check Gradle installation
@@ -127,10 +248,45 @@ if command -v gradle &> /dev/null; then
 elif [ -f "/opt/gradle/bin/gradle" ]; then
     print_status "Gradle found at: /opt/gradle/bin/gradle"
 else
-    print_error "Gradle not found. Required for building the VectorSimplification extension."
-    print_info "Install with: sudo apt-get install gradle"
-    print_info "Or download from: https://gradle.org/releases/"
-    exit 1
+    print_warning "Gradle not found. Required for building the VectorSimplification extension."
+
+    if [ -t 0 ]; then
+        read -p "Install Gradle? (y/n) " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            case $PKG_MANAGER in
+                apt-get)
+                    install_package "Gradle" "gradle" || exit 1
+                    ;;
+                dnf|yum)
+                    install_package "Gradle" "gradle" || exit 1
+                    ;;
+                pacman)
+                    install_package "Gradle" "gradle" || exit 1
+                    ;;
+                *)
+                    print_error "Unable to auto-install. Please install Gradle manually."
+                    print_info "Download from: https://gradle.org/releases/"
+                    exit 1
+                    ;;
+            esac
+
+            # Verify installation
+            if command -v gradle &> /dev/null; then
+                GRADLE_VERSION=$(gradle --version 2>&1 | grep "Gradle" | head -n 1)
+                print_status "Gradle installed successfully: $GRADLE_VERSION"
+            else
+                print_error "Gradle installation failed. Please install manually."
+                exit 1
+            fi
+        else
+            print_error "Gradle is required. Exiting."
+            exit 1
+        fi
+    else
+        print_error "Gradle required. Please install gradle and try again."
+        exit 1
+    fi
 fi
 
 # Step 5: Create user directories

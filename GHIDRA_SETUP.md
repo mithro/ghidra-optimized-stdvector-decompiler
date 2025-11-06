@@ -11,19 +11,30 @@ Run the automated setup script:
 ```
 
 This will:
-1. Check if Ghidra is installed (optionally download and install if missing)
-2. Verify Java installation
-3. Create necessary user directories
-4. Build the VectorSimplification extension
-5. Install the extension to Ghidra
-6. Verify the installation
+1. Check and optionally install basic dependencies (wget/curl, unzip)
+2. Check if Ghidra is installed (optionally download and install if missing)
+3. Check and optionally install Java 21
+4. Check and optionally install Gradle
+5. Create necessary user directories
+6. Build the VectorSimplification extension
+7. Install the extension to Ghidra
+8. Verify the installation
+
+The script will prompt you to install any missing dependencies automatically.
 
 ## Requirements
 
-- **Java 17 or later**: `sudo apt-get install openjdk-21-jdk`
-- **Gradle**: `sudo apt-get install gradle` (or download from https://gradle.org/releases/)
-- **wget** or **curl** (for downloading Ghidra if needed)
+The setup script can automatically install these dependencies on supported systems (Ubuntu/Debian, Fedora/RHEL, Arch):
+
+- **Java 17 or later** (script installs OpenJDK 21)
+- **Gradle** (for building the extension)
+- **wget** or **curl** (for downloading Ghidra)
 - **unzip** (for extracting archives)
+
+If you prefer manual installation:
+- Ubuntu/Debian: `sudo apt-get install openjdk-21-jdk gradle wget unzip`
+- Fedora/RHEL: `sudo dnf install java-21-openjdk-devel gradle wget unzip`
+- Arch: `sudo pacman -S jdk21-openjdk gradle wget unzip`
 
 ## Manual Installation
 
