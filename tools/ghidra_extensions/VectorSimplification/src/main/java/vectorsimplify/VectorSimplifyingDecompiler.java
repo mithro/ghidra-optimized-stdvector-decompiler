@@ -56,36 +56,34 @@ public class VectorSimplifyingDecompiler extends DecompInterface {
 			// Analyze and identify vector patterns
 			List<VectorPattern> patterns = patternMatcher.findVectorPatterns(highFunc);
 
+			// Get original code
+			DecompiledFunction decompiledFunc = results.getDecompiledFunction();
+			String originalCode = decompiledFunc != null ? decompiledFunc.getC() : "";
+
 			if (patterns.isEmpty()) {
 				// No patterns found - cache original code
-				DecompiledFunction decompiledFunc = results.getDecompiledFunction();
-				if (decompiledFunc != null) {
-					simplifiedCodeCache.put(func, decompiledFunc.getC());
-				}
+				simplifiedCodeCache.put(func, originalCode);
 				return results;
 			}
 
-			// Get the markup for rewriting
+			// Report what we found
+			System.out.println("[VectorSimplification] Simplifying " + patterns.size() +
+				" vector patterns in " + func.getName());
+
+			// Get the markup for AST-level rewriting
 			ClangTokenGroup markup = results.getCCodeMarkup();
 			if (markup == null) {
-				// No markup available - cache original code
-				DecompiledFunction decompiledFunc = results.getDecompiledFunction();
-				if (decompiledFunc != null) {
-					simplifiedCodeCache.put(func, decompiledFunc.getC());
-				}
+				// No markup available - use original code
+				simplifiedCodeCache.put(func, originalCode);
 				return results;
 			}
 
-			// Apply transformations using AST rewriter
-			ClangTokenRewriter rewriter = new ClangTokenRewriter(markup, patterns);
+			// Apply AST-level transformations
+			ClangTokenRewriter rewriter = new ClangTokenRewriter(markup, patterns, highFunc);
 			String simplifiedCode = rewriter.rewrite();
 
 			// Cache the simplified code
 			simplifiedCodeCache.put(func, simplifiedCode);
-
-			// Report what we did
-			System.out.println("[VectorSimplification] Simplified " + patterns.size() +
-				" vector patterns in " + func.getName());
 
 		}
 		catch (Exception e) {
