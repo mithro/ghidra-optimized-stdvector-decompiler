@@ -22,7 +22,8 @@ echo "========================================================================="
 echo "This script:"
 echo "  1. Downloads MSVC 14.44 headers and Windows SDK 10.0.26100"
 echo "  2. Installs clang-19 (required for MSVC 14.44 headers)"
-echo "  3. Compiles vector_test.cpp to Windows PE32+ with PDB symbols"
+echo "  3. Compiles vector_test.cpp with optimizations (/O2 /OPT:REF /OPT:ICF)"
+echo "  4. Generates Windows PE32+ binary with full PDB debug symbols"
 echo ""
 echo "Total download size: ~2.7 GB"
 echo "Required disk space: ~9 GB"
@@ -113,6 +114,7 @@ echo "Compiling..."
 
 clang-cl-19 \
     /std:c++17 \
+    /O2 \
     /EHsc \
     /Zi \
     /MD \
@@ -127,7 +129,9 @@ clang-cl-19 \
     /LIBPATH:"$MSVC_LIB" \
     /LIBPATH:"$SDK_LIB/ucrt/x64" \
     /LIBPATH:"$SDK_LIB/um/x64" \
-    /DEBUG:FULL
+    /DEBUG:FULL \
+    /OPT:REF \
+    /OPT:ICF
 
 # Verify results
 echo ""
@@ -146,6 +150,7 @@ if [ -f "vector_test_msvc.exe" ] && [ -f "vector_test_msvc.pdb" ]; then
     echo "  - MSVC headers: 14.44.35207"
     echo "  - Windows SDK: 10.0.26100.0"
     echo "  - Format: PE32+ executable (64-bit Windows)"
+    echo "  - Optimization: /O2 (Release build with /OPT:REF /OPT:ICF)"
     echo "  - Debug symbols: Full PDB format"
     echo "  - std::vector layout: MSVC (_Myfirst/0x8, _Mylast/0x10, _Myend/0x18)"
     echo ""
