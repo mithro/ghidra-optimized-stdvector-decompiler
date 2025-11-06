@@ -36,6 +36,13 @@ if ! command -v wine &> /dev/null; then
         . /etc/os-release
         if [ "$ID" = "debian" ]; then
             echo "Detected Debian $VERSION_CODENAME, using Debian Wine repository..."
+
+            # Enable contrib repository (required for winetricks on Debian)
+            if ! grep -q "^deb .* ${VERSION_CODENAME} .* contrib" /etc/apt/sources.list; then
+                echo "Enabling contrib repository for winetricks..."
+                sudo sed -i.bak "s/^\(deb .* ${VERSION_CODENAME}.*\) main/\1 main contrib/" /etc/apt/sources.list
+            fi
+
             sudo wget -NP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/debian/dists/${VERSION_CODENAME}/winehq-${VERSION_CODENAME}.sources
         elif [ "$ID" = "ubuntu" ]; then
             echo "Detected Ubuntu, using Ubuntu Wine repository..."
