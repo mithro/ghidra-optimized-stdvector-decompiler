@@ -88,14 +88,12 @@ public class VectorPatternMatcher {
 				continue;
 			}
 
-			// TODO: DATA pattern disabled - too aggressive
-			// Matches every load of _Myfirst, including iterator assignments
-			// Need to distinguish actual data() calls from internal pointer manipulation
-			// VectorPattern dataPattern = matchDataPattern(op);
-			// if (dataPattern != null) {
-			//     patterns.add(dataPattern);
-			//     continue;
-			// }
+			// Check for data pattern (only when pointer is actually used)
+			VectorPattern dataPattern = matchDataPattern(op);
+			if (dataPattern != null) {
+				patterns.add(dataPattern);
+				continue;
+			}
 		}
 
 		// Write results to file
@@ -304,26 +302,127 @@ public class VectorPatternMatcher {
 	}
 
 	/**
-	 * Match pattern: *myfirst or &myfirst
+	 * Match pattern: Load from _Myfirst when used as data pointer
 	 * Represents: vector.data()
+	 *
+	 * Only matches when the loaded pointer value is actually dereferenced or
+	 * used in pointer arithmetic, not when it's just assigned to a variable.
 	 */
 	private VectorPattern matchDataPattern(PcodeOpAST op) {
-		// Look for LOAD or PTRSUB accessing myfirst
-		if (op.getOpcode() != PcodeOp.LOAD && op.getOpcode() != PcodeOp.PTRSUB) {
+		// Look for LOAD that reads the _Myfirst field value
+		if (op.getOpcode() != PcodeOp.LOAD) {
 			return null;
 		}
 
-		// Check if we're accessing a vector member
-		for (int i = 0; i < op.getNumInputs(); i++) {
-			Varnode input = op.getInput(i);
-			VectorMember member = identifyVectorMember(input);
+		if (op.getNumInputs() < 2) {
+			return null;
+		}
 
-			if (member != null && member.type == VectorMemberType.MYFIRST) {
-				return new VectorPattern(VectorPatternType.DATA, op, member.baseVarnode, 0);
+		System.err.println("\nmatchDataPattern checking LOAD:");
+		System.err.println("  op: " + op);
+
+		// The address we're loading from (should be offset to _Myfirst field)
+		Varnode addressVarnode = op.getInput(1);
+		VectorMember member = identifyVectorMember(addressVarnode);
+
+		System.err.println("  address: " + addressVarnode);
+		System.err.println("  member: " + (member != null ? member.type : "null"));
+
+		// Check if we're loading from _Myfirst (offset 0x0)
+		if (member != null && member.type == VectorMemberType.MYFIRST) {
+			// This loads the pointer value stored in _Myfirst
+			// Only match if the result is used as a pointer (dereferenced or in pointer arithmetic)
+			Varnode result = op.getOutput();
+			System.err.println("  result varnode: " + result);
+
+			if (result != null) {
+				boolean isUsedAsPtr = isUsedAsPointer(result);
+				System.err.println("  isUsedAsPointer: " + isUsedAsPtr);
+
+				if (isUsedAsPtr) {
+					System.err.println("  >>> MATCHED DATA PATTERN! <<<");
+					return new VectorPattern(VectorPatternType.DATA, op, member.baseVarnode, 0);
+				} else {
+					System.err.println("  Not used as pointer - skipping (likely iterator assignment)");
+				}
 			}
 		}
 
 		return null;
+	}
+
+	/**
+	 * Check if a varnode is used as a pointer (dereferenced or used in pointer arithmetic)
+	 * rather than just stored in a variable.
+	 * Recursively traces through CAST/COPY operations.
+	 */
+	private boolean isUsedAsPointer(Varnode varnode) {
+		return isUsedAsPointerRecursive(varnode, new java.util.HashSet<Varnode>());
+	}
+
+	/**
+	 * Recursive helper to check pointer usage, tracking visited nodes to avoid cycles.
+	 */
+	private boolean isUsedAsPointerRecursive(Varnode varnode, java.util.Set<Varnode> visited) {
+		// Prevent infinite recursion on cycles
+		if (visited.contains(varnode)) {
+			return false;
+		}
+		visited.add(varnode);
+
+		Iterator<PcodeOp> descendants = varnode.getDescendants();
+
+		while (descendants.hasNext()) {
+			PcodeOp use = descendants.next();
+			int opcode = use.getOpcode();
+
+			System.err.println("    use: " + use.getMnemonic() + " at " + use.getSeqnum().getTarget());
+
+			// Check if used as address operand in LOAD/STORE
+			if (opcode == PcodeOp.LOAD || opcode == PcodeOp.STORE) {
+				// In LOAD/STORE, input 1 is the address
+				if (use.getNumInputs() >= 2 && use.getInput(1) == varnode) {
+					System.err.println("      -> used as LOAD/STORE address!");
+					return true;
+				}
+			}
+
+			// Check if used in pointer arithmetic
+			if (opcode == PcodeOp.PTRADD || opcode == PcodeOp.PTRSUB) {
+				System.err.println("      -> used in pointer arithmetic!");
+				return true;
+			}
+
+			// Check if used as function call argument (could be data access)
+			if (opcode == PcodeOp.CALL || opcode == PcodeOp.CALLIND) {
+				System.err.println("      -> used in function call!");
+				return true;
+			}
+
+			// Trace through CAST and COPY operations
+			if (opcode == PcodeOp.CAST || opcode == PcodeOp.COPY) {
+				Varnode output = use.getOutput();
+				if (output != null) {
+					System.err.println("      -> tracing through " + use.getMnemonic());
+					if (isUsedAsPointerRecursive(output, visited)) {
+						return true;
+					}
+				}
+			}
+
+			// Trace through MULTIEQUAL (PHI nodes)
+			if (opcode == PcodeOp.MULTIEQUAL) {
+				Varnode output = use.getOutput();
+				if (output != null) {
+					System.err.println("      -> tracing through MULTIEQUAL");
+					if (isUsedAsPointerRecursive(output, visited)) {
+						return true;
+					}
+				}
+			}
+		}
+
+		return false;
 	}
 
 	/**
