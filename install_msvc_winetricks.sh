@@ -30,8 +30,28 @@ if ! command -v wine &> /dev/null; then
     sudo dpkg --add-architecture i386
     sudo mkdir -pm755 /etc/apt/keyrings
     sudo wget -O /etc/apt/keyrings/winehq-archive.key https://dl.winehq.org/wine-builds/winehq.key
-    sudo wget -NP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/ubuntu/dists/noble/winehq-noble.sources || \
-        sudo wget -NP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/ubuntu/dists/jammy/winehq-jammy.sources
+
+    # Detect OS and use appropriate Wine repository
+    if [ -f /etc/os-release ]; then
+        . /etc/os-release
+        if [ "$ID" = "debian" ]; then
+            echo "Detected Debian $VERSION_CODENAME, using Debian Wine repository..."
+            sudo wget -NP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/debian/dists/${VERSION_CODENAME}/winehq-${VERSION_CODENAME}.sources
+        elif [ "$ID" = "ubuntu" ]; then
+            echo "Detected Ubuntu, using Ubuntu Wine repository..."
+            sudo wget -NP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/ubuntu/dists/noble/winehq-noble.sources || \
+                sudo wget -NP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/ubuntu/dists/jammy/winehq-jammy.sources
+        else
+            echo "ERROR: Unsupported OS: $ID"
+            echo "This script only supports Debian and Ubuntu."
+            echo "Please install Wine manually and try again."
+            exit 1
+        fi
+    else
+        echo "ERROR: Cannot detect OS (/etc/os-release not found)"
+        exit 1
+    fi
+
     sudo apt update
     sudo apt install -y --install-recommends winehq-stable winetricks
 else
