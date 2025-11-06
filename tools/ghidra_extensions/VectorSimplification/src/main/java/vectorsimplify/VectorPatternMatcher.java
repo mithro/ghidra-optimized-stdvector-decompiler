@@ -173,11 +173,14 @@ public class VectorPatternMatcher {
 	 * Identify if a varnode represents a vector member access.
 	 */
 	private VectorMember identifyVectorMember(Varnode varnode) {
+		System.err.println("identifyVectorMember called");
 		if (varnode == null) {
+			System.err.println("  varnode is null");
 			return null;
 		}
 
 		PcodeOp defOp = varnode.getDef();
+		System.err.println("  defOp: " + (defOp != null ? defOp.getMnemonic() : "null"));
 		if (defOp == null) {
 			return null;
 		}
@@ -209,6 +212,54 @@ public class VectorPatternMatcher {
 						Varnode sourceVar = traceToSourceVariable(baseVarnode);
 						if (sourceVar != null && isVectorType(sourceVar)) {
 							return new VectorMember(memberType, baseVarnode);
+						}
+					}
+				}
+			}
+		}
+
+		// Check for LOAD operations accessing vector members
+		// Pattern: varnode = LOAD(address) where address = base + offset
+		// This handles cases where compiler loads members into local variables first
+		if (defOp.getOpcode() == PcodeOp.LOAD) {
+			if (defOp.getNumInputs() >= 2) {
+				// Input 0 is space, input 1 is address
+				Varnode addrVarnode = defOp.getInput(1);
+
+				// Check if address is computed as base + offset
+				PcodeOp addrDef = addrVarnode.getDef();
+				if (addrDef != null &&
+				    (addrDef.getOpcode() == PcodeOp.PTRSUB || addrDef.getOpcode() == PcodeOp.PTRADD)) {
+
+					if (addrDef.getNumInputs() >= 2) {
+						Varnode baseVarnode = addrDef.getInput(0);
+						Varnode offsetVarnode = addrDef.getInput(1);
+
+						if (offsetVarnode.isConstant()) {
+							long offset = offsetVarnode.getOffset();
+
+							VectorMemberType memberType = null;
+							if (offset == OFFSET_MYFIRST) {
+								memberType = VectorMemberType.MYFIRST;
+							}
+							else if (offset == OFFSET_MYLAST) {
+								memberType = VectorMemberType.MYLAST;
+							}
+							else if (offset == OFFSET_MYEND) {
+								memberType = VectorMemberType.MYEND;
+							}
+
+							if (memberType != null) {
+								// Check if baseVarnode has vector type
+								System.err.println("LOAD: memberType=" + memberType + " offset=0x" + Long.toHexString(offset));
+								System.err.println("LOAD: base=" + baseVarnode);
+								boolean isVec = isVectorType(baseVarnode);
+								System.err.println("LOAD: isVector=" + isVec);
+								if (isVec) {
+									System.err.println(">>> FOUND VECTOR MEMBER VIA LOAD! <<<");
+									return new VectorMember(memberType, baseVarnode);
+								}
+							}
 						}
 					}
 				}
@@ -403,8 +454,20 @@ public class VectorPatternMatcher {
 			return true;
 		}
 
-		// Could add more sophisticated analysis here
-		// (e.g., check if they derive from same parameter/variable)
+		// Trace both back to source variables and check if they're the same
+		Varnode source1 = traceToSourceVariable(base1);
+		Varnode source2 = traceToSourceVariable(base2);
+
+		if (source1 != null && source2 != null && source1.equals(source2)) {
+			return true;
+		}
+
+		// Check if they have the same HighVariable (same variable)
+		if (base1.getHigh() != null && base2.getHigh() != null) {
+			if (base1.getHigh().equals(base2.getHigh())) {
+				return true;
+			}
+		}
 
 		return false;
 	}
