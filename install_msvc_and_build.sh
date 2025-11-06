@@ -113,8 +113,9 @@ if [ ! -d "$MSVC_INSTALL/VC/Tools/MSVC" ]; then
     echo "Waiting for installation to complete..."
     sleep 30
 
-    # Kill any hanging installer processes
-    wineserver -k
+    # Kill any hanging installer processes (don't fail if wineserver returns error)
+    echo "Stopping wine server..."
+    wineserver -k || true
     sleep 5
 else
     echo "MSVC Build Tools already installed"
@@ -122,10 +123,12 @@ fi
 
 # Step 7: Verify installation and compile
 echo ""
+echo "========================================================================="
 echo "[7/7] Verifying MSVC installation and compiling test..."
+echo "========================================================================="
 
 # Find cl.exe
-echo "Searching for cl.exe..."
+echo "Searching for cl.exe in $WINE_PREFIX/drive_c/BuildTools ..."
 CL_EXE=$(find "$WINE_PREFIX/drive_c/BuildTools" -name "cl.exe" -path "*/x64/*" 2>/dev/null | head -1)
 
 if [ -z "$CL_EXE" ]; then
@@ -156,9 +159,9 @@ echo "Compiler directory: $CL_DIR"
 
 # Find SDK paths
 echo "Searching for Windows SDK..."
-SDK_DIR=$(find "$WINE_PREFIX/drive_c" -type d -path "*/Windows Kits/10" 2>/dev/null | head -1)
+SDK_DIR=$(find "$WINE_PREFIX/drive_c" -type d -path "*/Windows Kits/10" 2>/dev/null | head -1) || true
 if [ -n "$SDK_DIR" ]; then
-    SDK_VERSION=$(ls -1 "$SDK_DIR/Include" 2>/dev/null | grep "^10" | sort -V | tail -1)
+    SDK_VERSION=$(ls -1 "$SDK_DIR/Include" 2>/dev/null | grep "^10" | sort -V | tail -1) || true
     if [ -n "$SDK_VERSION" ]; then
         SDK_INCLUDE="$SDK_DIR/Include/$SDK_VERSION"
         SDK_LIB="$SDK_DIR/Lib/$SDK_VERSION"
