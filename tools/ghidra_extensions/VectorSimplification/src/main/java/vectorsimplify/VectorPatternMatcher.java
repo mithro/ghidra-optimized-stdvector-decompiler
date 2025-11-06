@@ -16,9 +16,11 @@ import java.util.*;
 public class VectorPatternMatcher {
 
 	// Vector member offsets in MSVC std::_Vector_val (64-bit)
-	private static final long OFFSET_MYFIRST = 0x8;
-	private static final long OFFSET_MYLAST = 0x10;
-	private static final long OFFSET_MYEND = 0x18;
+	// Structure: vector->_Mypair(0x0)->_Myval2(0x0)->_Myfirst/Last/End
+	// Absolute offsets from vector pointer:
+	private static final long OFFSET_MYFIRST = 0x0;  // First element pointer
+	private static final long OFFSET_MYLAST = 0x8;   // Last element pointer (one past end)
+	private static final long OFFSET_MYEND = 0x10;   // End of capacity pointer
 
 	/**
 	 * Find all vector patterns in a high function.
@@ -200,15 +202,128 @@ public class VectorPatternMatcher {
 						memberType = VectorMemberType.MYEND;
 					}
 
-					// Only return if we found a valid offset AND the base is actually a vector
-					if (memberType != null && isVectorType(baseVarnode)) {
-						return new VectorMember(memberType, baseVarnode);
+					// FIX: Trace back to source variable to find vector type
+					// The baseVarnode might be an intermediate result (pointer, etc.)
+					// We need to find the original variable that has the vector type
+					if (memberType != null) {
+						Varnode sourceVar = traceToSourceVariable(baseVarnode);
+						if (sourceVar != null && isVectorType(sourceVar)) {
+							return new VectorMember(memberType, baseVarnode);
+						}
 					}
 				}
 			}
 		}
 
 		return null;
+	}
+
+	/**
+	 * Trace a varnode back to its source variable.
+	 *
+	 * Follows through COPY, CAST, PTRSUB, PTRADD, and LOAD operations to find
+	 * the original variable (parameter, local, etc.) that has type information.
+	 *
+	 * @param varnode The varnode to trace
+	 * @return The source variable, or the original varnode if can't trace further
+	 */
+	private Varnode traceToSourceVariable(Varnode varnode) {
+		if (varnode == null) {
+			return null;
+		}
+
+		// Limit depth to prevent infinite loops
+		int maxDepth = 20;
+		Varnode current = varnode;
+
+		for (int depth = 0; depth < maxDepth; depth++) {
+			// If this varnode has vector type info, we found it!
+			if (hasVectorTypeInfo(current)) {
+				return current;
+			}
+
+			// If it's a free varnode (parameter, local variable), stop here
+			if (current.isFree() || current.isInput()) {
+				return current;
+			}
+
+			PcodeOp defOp = current.getDef();
+			if (defOp == null) {
+				// No definition - this is as far as we can trace
+				return current;
+			}
+
+			int opcode = defOp.getOpcode();
+
+			// Trace through operations that just transform the value
+			if (opcode == PcodeOp.COPY || opcode == PcodeOp.CAST) {
+				// These just copy/cast the value - trace to input
+				if (defOp.getNumInputs() > 0) {
+					current = defOp.getInput(0);
+					continue;
+				}
+			}
+			else if (opcode == PcodeOp.PTRSUB || opcode == PcodeOp.PTRADD) {
+				// Pointer arithmetic - trace to base pointer
+				if (defOp.getNumInputs() > 0) {
+					current = defOp.getInput(0);
+					continue;
+				}
+			}
+			else if (opcode == PcodeOp.LOAD) {
+				// Load from memory - trace to address
+				if (defOp.getNumInputs() > 1) {
+					current = defOp.getInput(1);
+					continue;
+				}
+			}
+
+			// Can't trace further
+			return current;
+		}
+
+		return current;
+	}
+
+	/**
+	 * Quick check if a varnode has vector type information.
+	 * Used during tracing to find the best candidate.
+	 */
+	private boolean hasVectorTypeInfo(Varnode varnode) {
+		if (varnode == null) {
+			return false;
+		}
+
+		HighVariable highVar = varnode.getHigh();
+		if (highVar == null) {
+			return false;
+		}
+
+		DataType dataType = highVar.getDataType();
+		if (dataType == null) {
+			return false;
+		}
+
+		String typeName = dataType.getName();
+		if (typeName != null && (typeName.contains("vector<") ||
+		                         typeName.contains("Vector_val"))) {
+			return true;
+		}
+
+		// Check for pointer to vector
+		if (dataType instanceof Pointer) {
+			Pointer ptrType = (Pointer) dataType;
+			DataType pointedType = ptrType.getDataType();
+			if (pointedType != null) {
+				String pointedName = pointedType.getName();
+				if (pointedName != null && (pointedName.contains("vector<") ||
+				                             pointedName.contains("Vector_val"))) {
+					return true;
+				}
+			}
+		}
+
+		return false;
 	}
 
 	/**
