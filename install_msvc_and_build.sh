@@ -6,10 +6,22 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TEST_DIR="$SCRIPT_DIR/test/vector_test"
 WINE_PREFIX="$HOME/.wine_msvc"
+LOG_FILE="$SCRIPT_DIR/msvc_install.log"
+
+# Redirect all output to log file AND console using tee
+# Only do this if we're not already logging (prevent recursive execution)
+if [ -z "$LOGGING_ENABLED" ]; then
+    export LOGGING_ENABLED=1
+    echo "Logging to: $LOG_FILE"
+    echo "Starting MSVC installation at $(date)" > "$LOG_FILE"
+    exec > >(tee -a "$LOG_FILE") 2>&1
+fi
 
 echo "========================================================================="
 echo "MSVC++ Build Tools Installation (Fixed Version)"
 echo "========================================================================="
+echo "Log file: $LOG_FILE"
+echo "Started at: $(date)"
 echo ""
 
 # Step 1: Install Wine and winetricks
@@ -233,13 +245,21 @@ Full debug symbols and MSVC std::vector layout." || echo "Nothing new to commit"
     echo "========================================================================="
     echo "ALL DONE!"
     echo "========================================================================="
+    echo "Completed at: $(date)"
+    echo "Full log saved to: $LOG_FILE"
+    echo ""
+    echo "You can share the log with: cat $LOG_FILE"
 
 else
     echo ""
     echo "========================================================================="
     echo "ERROR: Compilation failed"
     echo "========================================================================="
+    echo "Completed at: $(date)"
     echo "Check compile.log for details"
+    echo "Full log saved to: $LOG_FILE"
+    echo ""
+    echo "You can share the log with: cat $LOG_FILE"
     cat compile.log
     exit 1
 fi
