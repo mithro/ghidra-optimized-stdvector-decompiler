@@ -230,7 +230,7 @@ cd test/vector_test
 python3 test_extension.py
 
 # Or run full analysis
-/root/tools/ghidra/support/analyzeHeadless \
+$GHIDRA_INSTALL_DIR/support/analyzeHeadless \
     . VectorTestMSVC \
     -import vector_test_msvc.exe \
     -overwrite \

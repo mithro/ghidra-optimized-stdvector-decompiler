@@ -172,15 +172,16 @@ if [ -f "vector_test_msvc.exe" ] && [ -f "vector_test_msvc.pdb" ]; then
     echo "Testing with Ghidra..."
     cd "$SCRIPT_DIR"
 
-    if [ -f "/root/tools/ghidra/support/analyzeHeadless" ]; then
-        /root/tools/ghidra/support/analyzeHeadless \
+    GHIDRA_DIR="${GHIDRA_INSTALL_DIR:-$HOME/tools/ghidra}"
+    if [ -f "$GHIDRA_DIR/support/analyzeHeadless" ]; then
+        "$GHIDRA_DIR/support/analyzeHeadless" \
             "$TEST_DIR" VectorTestMSVC \
             -import "$TEST_DIR/vector_test_msvc.exe" \
             -overwrite \
             -scriptPath "$TEST_DIR" \
             -postScript test_extension.py 2>&1 | tee "$TEST_DIR/ghidra_test.log" | tail -50
     else
-        echo "Ghidra not found at /root/tools/ghidra, skipping test"
+        echo "Ghidra not found at $GHIDRA_DIR, skipping test"
     fi
 
     echo ""

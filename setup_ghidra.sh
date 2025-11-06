@@ -14,7 +14,7 @@ NC='\033[0m' # No Color
 # Configuration
 GHIDRA_VERSION="${GHIDRA_VERSION:-11.4.2}"
 GHIDRA_RELEASE="${GHIDRA_RELEASE:-20250826}"
-GHIDRA_INSTALL_DIR="${GHIDRA_INSTALL_DIR:-/root/tools/ghidra}"
+GHIDRA_INSTALL_DIR="${GHIDRA_INSTALL_DIR:-$HOME/tools/ghidra}"
 GHIDRA_URL="https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_${GHIDRA_VERSION}_build/ghidra_${GHIDRA_VERSION}_PUBLIC_${GHIDRA_RELEASE}.zip"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
