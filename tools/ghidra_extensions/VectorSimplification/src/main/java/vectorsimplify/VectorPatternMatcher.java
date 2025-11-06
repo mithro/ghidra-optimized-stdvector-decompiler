@@ -1,6 +1,8 @@
 package vectorsimplify;
 
 import ghidra.program.model.pcode.*;
+import ghidra.program.model.data.DataType;
+import ghidra.program.model.data.Pointer;
 import java.util.*;
 
 /**
@@ -43,11 +45,12 @@ public class VectorPatternMatcher {
 				continue;
 			}
 
-			// Check for data pattern
-			VectorPattern dataPattern = matchDataPattern(op);
-			if (dataPattern != null) {
-				patterns.add(dataPattern);
-			}
+			// TODO: DATA pattern temporarily disabled for debugging
+			// Need to verify SIZE/EMPTY work correctly first
+			// VectorPattern dataPattern = matchDataPattern(op);
+			// if (dataPattern != null) {
+			//     patterns.add(dataPattern);
+			// }
 		}
 
 		return patterns;
@@ -186,20 +189,90 @@ public class VectorPatternMatcher {
 				if (offsetVarnode.isConstant()) {
 					long offset = offsetVarnode.getOffset();
 
+					VectorMemberType memberType = null;
 					if (offset == OFFSET_MYFIRST) {
-						return new VectorMember(VectorMemberType.MYFIRST, baseVarnode);
+						memberType = VectorMemberType.MYFIRST;
 					}
 					else if (offset == OFFSET_MYLAST) {
-						return new VectorMember(VectorMemberType.MYLAST, baseVarnode);
+						memberType = VectorMemberType.MYLAST;
 					}
 					else if (offset == OFFSET_MYEND) {
-						return new VectorMember(VectorMemberType.MYEND, baseVarnode);
+						memberType = VectorMemberType.MYEND;
+					}
+
+					// Only return if we found a valid offset AND the base is actually a vector
+					if (memberType != null && isVectorType(baseVarnode)) {
+						return new VectorMember(memberType, baseVarnode);
 					}
 				}
 			}
 		}
 
 		return null;
+	}
+
+	/**
+	 * Check if a varnode has a std::vector type.
+	 * Uses Ghidra's type information to validate.
+	 */
+	private boolean isVectorType(Varnode varnode) {
+		if (varnode == null) {
+			return false;
+		}
+
+		// Try to get the high-level type information
+		HighVariable highVar = varnode.getHigh();
+		if (highVar == null) {
+			// No type info available - REJECT for safety
+			// Many non-vector structs use offset 0x8/0x10/0x18
+			return false;
+		}
+
+		// Get the data type
+		DataType dataType = highVar.getDataType();
+		if (dataType == null) {
+			// No type info available - REJECT
+			return false;
+		}
+
+		// Get the type name
+		String typeName = dataType.getName();
+		if (typeName == null) {
+			// No type name - REJECT
+			return false;
+		}
+
+		// Check if this is a vector type
+		// Handles: vector<T>, std::vector<T>, _Vector_val<T>
+		if (typeName.contains("vector<") || typeName.contains("vector_") ||
+			typeName.contains("Vector_val")) {
+			return true;
+		}
+
+		// Check for pointer/reference to vector
+		if (dataType instanceof Pointer) {
+			Pointer ptrType = (Pointer) dataType;
+			DataType pointedType = ptrType.getDataType();
+			if (pointedType != null) {
+				String pointedName = pointedType.getName();
+				if (pointedName != null && (pointedName.contains("vector<") ||
+					pointedName.contains("vector_") || pointedName.contains("Vector_val"))) {
+					return true;
+				}
+			}
+		}
+
+		// Check the full path name (includes namespace)
+		String pathName = dataType.getPathName();
+		if (pathName != null && (pathName.contains("/std/vector") ||
+			pathName.contains("/vector<") || pathName.contains("std::vector"))) {
+			return true;
+		}
+
+		// REJECT: We have type info, but it's not a vector type
+		// This filters out false positives where offset 0x8/0x10/0x18 is used
+		// for non-vector structs
+		return false;
 	}
 
 	/**
