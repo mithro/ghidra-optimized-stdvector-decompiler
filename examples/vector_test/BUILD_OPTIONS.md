@@ -187,7 +187,6 @@ Our Ghidra extension specifically looks for offsets 0x8, 0x10, 0x18, so GCC bina
 This is the most reliable Linux-only approach:
 ```bash
 cd ~/github/mithro/ghidra-optimized-stdvector-decompiler
-git pull origin claude/optimize-vector-decompilation-011CUpY1cdcN9aA4F6xpnSs6
 ./install_msvc_wine.sh
 ```
 
