@@ -69,7 +69,7 @@ Extract to `$HOME/tools/ghidra/` (or set `GHIDRA_INSTALL_DIR`)
 ### 2. Build OptimizedVectorDecompiler Extension
 
 ```bash
-cd tools/ghidra_extensions/OptimizedVectorDecompiler
+cd extension
 export GHIDRA_INSTALL_DIR=$HOME/tools/ghidra
 bash build.sh
 ```
@@ -164,7 +164,7 @@ $GHIDRA_INSTALL_DIR/support/analyzeHeadless \
 Test the extension with the provided test binary:
 
 ```bash
-cd test/vector_test
+cd examples/vector_test
 python test_transformation.py
 ```
 
@@ -208,14 +208,14 @@ This means your Gradle version is too old (< 8.0). Solutions:
 
 **Option 1: Let the build script handle it (recommended)**
 ```bash
-cd tools/ghidra_extensions/OptimizedVectorDecompiler
+cd extension
 bash build.sh
 # Answer 'y' when prompted to install Gradle 8.10.2 locally
 ```
 
 **Option 2: Install Gradle manually**
 ```bash
-cd tools/ghidra_extensions/OptimizedVectorDecompiler
+cd extension
 bash install_gradle.sh
 ```
 
@@ -249,7 +249,7 @@ bash install_gradle.sh
 
 2. Rebuild and reinstall:
    ```bash
-   cd tools/ghidra_extensions/OptimizedVectorDecompiler
+   cd extension
    bash build.sh
    cp build/libs/OptimizedVectorDecompiler.jar $GHIDRA_INSTALL_DIR/Ghidra/Features/Decompiler/lib/
    ```
@@ -263,7 +263,7 @@ bash install_gradle.sh
 
 2. Check Gradle:
    ```bash
-   cd tools/ghidra_extensions/OptimizedVectorDecompiler
+   cd extension
    ./gradlew --version
    ```
 
@@ -282,33 +282,20 @@ bash install_gradle.sh
    - Pattern detection only works with MSVC implementation
    - Uses offsets: _Myfirst (0x0), _Mylast (0x8), _Myend (0x10)
 
-## Optional Plugins
-
-Additional Ghidra plugins are available in `tools/plugin_installers/`:
-
-- **GhidraGPT**: AI-powered analysis assistant
-- **DAILA**: Deep learning for binary analysis
-- **ret-sync**: Synchronization with debuggers
-
-Install individual plugins:
-```bash
-cd tools/plugin_installers/ghidragpt
-./install_ghidragpt.sh
-```
 
 ## Development
 
 ### Building from Source
 
 ```bash
-cd tools/ghidra_extensions/OptimizedVectorDecompiler
+cd extension
 gradle -PGHIDRA_INSTALL_DIR=/path/to/ghidra buildExtension
 ```
 
 ### Running Tests
 
 ```bash
-cd test/vector_test
+cd examples/vector_test
 # Run analysis
 $GHIDRA_INSTALL_DIR/support/analyzeHeadless /tmp/test TestProject \
     -import vector_test_msvc.exe \
@@ -328,8 +315,8 @@ Rebuild and check stderr output.
 
 - [Ghidra Documentation](https://ghidra-sre.org/)
 - [Extension Development Guide](https://ghidra.re/ghidra_docs/api/)
-- [OptimizedVectorDecompiler Source](tools/ghidra_extensions/OptimizedVectorDecompiler/)
-- [Test Binaries](test/vector_test/)
+- [OptimizedVectorDecompiler Source](extension/)
+- [Test Binaries](examples/vector_test/)
 
 ## License
 
