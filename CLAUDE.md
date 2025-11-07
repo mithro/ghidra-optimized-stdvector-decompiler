@@ -27,10 +27,11 @@ extension/                   # Main Ghidra extension
   build.sh                   # Build script with Gradle version detection
   extension.properties        # Extension metadata
 
-examples/vector_test/         # Test binaries and analysis scripts
-  *.cpp                       # C++ test programs demonstrating patterns
-  *.py                        # Python Ghidra headless analysis scripts
-  *.exe                       # Pre-compiled MSVC test binaries
+demo/                         # Demo binaries and analysis scripts
+  *.cpp                       # C++ demo programs demonstrating patterns
+  scripts/*.py                # Python Ghidra headless analysis scripts
+  *.exe                       # Pre-compiled MSVC demo binaries
+  build_environments/         # Build environment setup scripts
 
 docs/
   INSTALLATION.md            # Detailed installation guide
@@ -69,22 +70,21 @@ This script:
 
 ### Run Test Suite
 ```bash
-cd examples/vector_test
-python test_transformation.py
+python3 test.py
 ```
 
 Expected output shows detected patterns:
-- 2 EMPTY patterns: `vec->empty()`
-- 1 SIZE pattern: `vec->size()`
-- 1 CAPACITY pattern: `vec->capacity()`
-- 1 DATA pattern: `vec->data()`
+- 5+ SIZE patterns: `vec->size()`
+- 7+ EMPTY patterns: `vec->empty()`
+- 7+ CAPACITY patterns: `vec->capacity()`
+- 2+ DATA patterns: `vec->data()`
 
 ### Headless Analysis
 ```bash
 $GHIDRA_INSTALL_DIR/support/analyzeHeadless \
-    /tmp/test_project TestProject \
-    -import examples/vector_test/vector_test_msvc.exe \
-    -postScript examples/vector_test/test_transformation.py
+    /tmp/demo_project DemoProject \
+    -import demo/vector_extra_O2.exe \
+    -postScript demo/scripts/analyze_patterns.py
 ```
 
 ## Architecture
@@ -172,7 +172,7 @@ The matcher writes verbose debug output to stderr:
 1. Modify Java source
 2. Run `cd extension && ./build.sh`
 3. Copy JAR: `cp build/libs/OptimizedVectorDecompiler.jar $GHIDRA_INSTALL_DIR/Ghidra/Features/Decompiler/lib/`
-4. Test: `cd examples/vector_test && python test_transformation.py`
+4. Test: `python3 test.py`
 
 ## Known Limitations
 
@@ -205,6 +205,6 @@ Run `cd extension && ./build.sh` and accept the prompt to install Gradle 8.10.2 
 ### Patterns Not Detecting
 - Verify binary compiled with MSVC: `file binary.exe`
 - Check that analysis includes PDB symbols if available
-- Run test binaries first: `cd examples/vector_test && python test_transformation.py`
+- Run test binaries first: `python3 test.py`
 - Check stderr for matcher debug output
 - Enable verbose logging to see which patterns are being checked
