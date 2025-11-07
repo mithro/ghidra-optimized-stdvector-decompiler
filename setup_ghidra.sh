@@ -292,25 +292,43 @@ check_gradle_version() {
 
 GRADLE_OK=false
 
-# Check if gradle is available and meets minimum version
-if command -v gradle &> /dev/null; then
-    print_info "Checking Gradle version (this may take a moment)..."
+# Check for Gradle installations in priority order
+# 1. Check for local Gradle installation (from install_gradle.sh)
+LOCAL_GRADLE="$SCRIPT_DIR/tools/ghidra_extensions/VectorSimplification/gradle/bin/gradle"
+if [ -f "$LOCAL_GRADLE" ]; then
+    print_info "Checking local Gradle installation..."
+    set +e
+    GRADLE_VERSION=$(check_gradle_version "$LOCAL_GRADLE")
+    GRADLE_CHECK_RESULT=$?
+    set -e
+    if [ $GRADLE_CHECK_RESULT -eq 0 ]; then
+        print_status "Local Gradle found: $GRADLE_VERSION (meets requirement >= $MIN_GRADLE_MAJOR.$MIN_GRADLE_MINOR)"
+        GRADLE_OK=true
+    fi
+fi
+
+# 2. Check system gradle (only if local not found/suitable)
+if [ "$GRADLE_OK" = false ] && command -v gradle &> /dev/null; then
+    print_info "Checking system Gradle version (this may take a moment)..."
     set +e
     GRADLE_VERSION=$(check_gradle_version "gradle")
     GRADLE_CHECK_RESULT=$?
     set -e
     if [ $GRADLE_CHECK_RESULT -eq 0 ]; then
-        print_status "Gradle found: $GRADLE_VERSION (meets requirement >= $MIN_GRADLE_MAJOR.$MIN_GRADLE_MINOR)"
+        print_status "System Gradle found: $GRADLE_VERSION (meets requirement >= $MIN_GRADLE_MAJOR.$MIN_GRADLE_MINOR)"
         GRADLE_OK=true
     else
         if [ "$GRADLE_VERSION" = "unknown" ]; then
-            print_warning "Gradle found but unable to determine version (may be too slow or broken)"
+            print_warning "System Gradle found but unable to determine version (may be too slow or broken)"
         else
-            print_warning "Gradle found but version $GRADLE_VERSION is too old (need >= $MIN_GRADLE_MAJOR.$MIN_GRADLE_MINOR)"
+            print_warning "System Gradle found but version $GRADLE_VERSION is too old (need >= $MIN_GRADLE_MAJOR.$MIN_GRADLE_MINOR)"
         fi
-        print_info "The build script will attempt to use a local Gradle installation."
+        print_info "The build script will use a local Gradle installation."
     fi
-elif [ -f "/opt/gradle/bin/gradle" ]; then
+fi
+
+# 3. Check /opt/gradle (only if neither local nor system found/suitable)
+if [ "$GRADLE_OK" = false ] && [ -f "/opt/gradle/bin/gradle" ]; then
     print_info "Checking Gradle at /opt/gradle/bin/gradle..."
     set +e
     GRADLE_VERSION=$(check_gradle_version "/opt/gradle/bin/gradle")
