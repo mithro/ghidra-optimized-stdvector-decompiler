@@ -81,7 +81,7 @@ The extension is now active and will automatically simplify vector patterns!
 
 ## Manual Installation
 
-If you prefer to build and install manually, see [docs/INSTALLATION.md](docs/INSTALLATION.md) for detailed instructions.
+If you prefer to build and install manually, see [INSTALLATION.md](INSTALLATION.md) for detailed instructions.
 
 ## Usage
 
@@ -154,7 +154,7 @@ export GHIDRA_INSTALL_DIR=/path/to/ghidra
 
 The built extension will be in `extension/dist/`.
 
-For more details, see [docs/INSTALLATION.md](docs/INSTALLATION.md).
+For more details, see [INSTALLATION.md](INSTALLATION.md).
 
 ## Troubleshooting
 
@@ -184,7 +184,7 @@ If you see `unexpected token: :` errors, your Gradle is too old (<  8.0). The bu
 - Check that you're analyzing a Windows executable
 - Try running test binaries in `examples/vector_test/` first
 
-For more help, see [docs/INSTALLATION.md](docs/INSTALLATION.md#troubleshooting).
+For more help, see [INSTALLATION.md](INSTALLATION.md#troubleshooting).
 
 ## Contributing
 
@@ -211,7 +211,7 @@ This is the same license as Ghidra itself.
 
 - [Ghidra Documentation](https://ghidra-sre.org/)
 - [Ghidra Extension Development](https://ghidra.re/ghidra_docs/api/)
-- [Installation Guide](docs/INSTALLATION.md)
+- [Installation Guide](INSTALLATION.md)
 
 ---
 
