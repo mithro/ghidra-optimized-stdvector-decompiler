@@ -1,6 +1,6 @@
-# VectorSimplification Ghidra Extension
+# Optimized Vector Decompiler - Ghidra Plugin
 
-A Ghidra extension that simplifies std::vector operations in decompiled C code by transforming low-level pointer arithmetic into idiomatic C++ method calls.
+A Ghidra plugin that improves decompilation of optimized binaries by transforming std::vector pointer arithmetic from MSVC-compiled code into idiomatic C++ method calls.
 
 ## Features
 
@@ -24,7 +24,7 @@ Transforms MSVC std::vector operations at the AST level (NO regex/string manipul
 
 Copy JAR to Ghidra's classpath:
 ```bash
-cp VectorSimplification.jar $GHIDRA_HOME/Ghidra/Features/Decompiler/lib/
+cp OptimizedVectorDecompiler.jar $GHIDRA_HOME/Ghidra/Features/Decompiler/lib/
 ```
 
 ## Usage
