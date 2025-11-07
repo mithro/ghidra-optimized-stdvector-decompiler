@@ -17,10 +17,15 @@ This will:
 4. Check and optionally install Gradle
 5. Create necessary user directories
 6. Build the VectorSimplification extension
-7. Install the extension to Ghidra
-8. Verify the installation
+7. Install the extension to Ghidra (both GUI and headless modes)
+8. **Automatically enable the extension** (no manual GUI configuration needed!)
+9. Verify the installation
 
 The script will prompt you to install any missing dependencies automatically.
+
+**Note:** The extension is automatically enabled for both:
+- **GUI mode**: Configured via user preferences file
+- **Headless mode**: JAR installed to Decompiler lib directory
 
 ## Requirements
 
@@ -90,6 +95,24 @@ cp build/libs/VectorSimplification.jar $GHIDRA_INSTALL_DIR/Ghidra/Features/Decom
 
 ### 5. Enable Extension in Ghidra
 
+**Automatic (via setup script):**
+The setup script automatically enables the extension - no manual steps needed!
+
+**Manual (if not using setup script):**
+1. Create preferences file:
+```bash
+mkdir -p ~/.ghidra/.ghidra_11.4.2_PUBLIC/preferences
+cat > ~/.ghidra/.ghidra_11.4.2_PUBLIC/preferences/ExtensionProvider <<'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<FILE_INFO>
+    <BASIC_INFO>
+        <STATE NAME="Extension States" TYPE="string" VALUE="VectorSimplification:true;" />
+    </BASIC_INFO>
+</FILE_INFO>
+EOF
+```
+
+**OR via GUI:**
 1. Launch Ghidra: `$GHIDRA_INSTALL_DIR/ghidraRun`
 2. Go to: **File → Configure**
 3. Check: **VectorSimplification**

@@ -446,6 +446,37 @@ fi
 
 print_status "VectorSimplification extension installed"
 
+# Enable extension in user preferences
+print_info "Enabling VectorSimplification extension..."
+PREFS_DIR="$GHIDRA_USER_DIR/preferences"
+mkdir -p "$PREFS_DIR"
+
+# Create or update ExtensionProvider preferences to enable VectorSimplification
+EXTENSION_PREFS="$PREFS_DIR/ExtensionProvider"
+if [ ! -f "$EXTENSION_PREFS" ]; then
+    cat > "$EXTENSION_PREFS" <<'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<FILE_INFO>
+    <BASIC_INFO>
+        <STATE NAME="Extension States" TYPE="string" VALUE="VectorSimplification:true;" />
+    </BASIC_INFO>
+</FILE_INFO>
+EOF
+    print_status "Extension auto-enabled for GUI mode"
+else
+    # Update existing file to add VectorSimplification
+    if grep -q "VectorSimplification" "$EXTENSION_PREFS"; then
+        sed -i 's/VectorSimplification:[^;]*/VectorSimplification:true/g' "$EXTENSION_PREFS"
+        print_status "Extension state updated to enabled"
+    else
+        # Add VectorSimplification to existing STATE value
+        sed -i 's/VALUE="\([^"]*\)"/VALUE="\1VectorSimplification:true;"/g' "$EXTENSION_PREFS"
+        print_status "Extension added to enabled list"
+    fi
+fi
+
+print_info "Extension is enabled for both GUI and headless modes"
+
 # Step 8: Install optional plugins
 echo ""
 echo -e "${BLUE}Step 8: Checking for optional plugins...${NC}"
@@ -506,13 +537,13 @@ echo -e "${BLUE}================================================================
 echo ""
 echo "Ghidra installation: $GHIDRA_INSTALL_DIR"
 echo "Extension installed: VectorSimplification"
+echo "Extension status: ${GREEN}Automatically enabled${NC}"
 echo ""
-echo -e "${YELLOW}Next steps:${NC}"
-echo "  1. Start Ghidra: $GHIDRA_INSTALL_DIR/ghidraRun"
-echo "  2. Enable extension: File → Configure → Check 'VectorSimplification'"
-echo "  3. Restart Ghidra for changes to take effect"
+echo -e "${YELLOW}Using Ghidra GUI:${NC}"
+echo "  Start Ghidra: $GHIDRA_INSTALL_DIR/ghidraRun"
+echo "  The VectorSimplification extension is already enabled!"
 echo ""
-echo -e "${YELLOW}For headless analysis:${NC}"
+echo -e "${YELLOW}Using headless analysis:${NC}"
 echo "  $GHIDRA_INSTALL_DIR/support/analyzeHeadless <project> <name> -import <binary>"
 echo ""
 echo -e "${YELLOW}Test the extension:${NC}"
