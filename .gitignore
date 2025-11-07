@@ -1,0 +1,59 @@
+# Gradle build artifacts
+extension/build/
+extension/dist/
+extension/.gradle/
+extension/gradle/
+
+# Compiled class files
+*.class
+
+# JAR files (except in dist/)
+*.jar
+!extension/dist/*.jar
+
+# Log files
+*.log
+
+# Ghidra project files
+*.gpr
+*.rep/
+*.lock
+**/.rep/
+**/~index.dat
+**/~index.bak
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+.claude/
+*.swp
+*.swo
+*~
+.worktrees/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.venv/
+.uv/
+
+# Test outputs
+examples/vector_test/VectorTest.rep/
+examples/vector_test/VectorTest.gpr
+examples/vector_test/*.gpr
+examples/vector_test/ghidra_test.log
+
+# Temporary files
+*.tmp
+*.bak
+*.orig
+
+# Local configuration
+local/
