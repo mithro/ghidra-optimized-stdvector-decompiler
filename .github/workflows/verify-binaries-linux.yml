@@ -23,6 +23,20 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y python3 msitools ca-certificates wget git curl
 
+      # TODO: PR #9 will change paths from examples/vector_test/ to demo/
+      # Update binary paths when that PR merges
+      - name: Backup committed binary before rebuild
+        run: |
+          cd examples/vector_test
+          if [ -f "vector_test_msvc.exe" ]; then
+            cp vector_test_msvc.exe vector_test_msvc.exe.committed
+            echo "Backed up committed binary to vector_test_msvc.exe.committed"
+            ls -lh vector_test_msvc.exe.committed
+          else
+            echo "ERROR: Committed binary not found: vector_test_msvc.exe"
+            exit 1
+          fi
+
       - name: Setup MSVC toolchain
         run: |
           cd examples/vector_test
@@ -35,39 +49,59 @@ jobs:
           curl -LsSf https://astral.sh/uv/install.sh | sh
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
+      # TODO: PR #9 will add multiple binaries (O2/Od optimization levels)
+      # Update this step to compare all binaries when that PR merges
       - name: Compare rebuilt binary to committed version
         run: |
           export PATH="$HOME/.cargo/bin:$PATH"
-          EXIT_CODE=0
 
           cd examples/vector_test
 
-          if [ -f "vector_test_msvc.exe" ]; then
-            echo "Checking if binary was rebuilt..."
-
-            # Get file sizes
-            SIZE_ORIGINAL=$(stat -c%s "vector_test_msvc.exe" 2>/dev/null || echo "0")
-            SIZE_REBUILT=$(stat -c%s "vector_test_msvc.exe" 2>/dev/null || echo "0")
-
-            echo "Original binary size: $SIZE_ORIGINAL bytes"
-            echo "Rebuilt binary size: $SIZE_REBUILT bytes"
-
-            # Note: For now, we just verify the rebuild succeeded
-            # In the future, we can add binary comparison using compare_binaries.py
-            # once we establish a reproducible build process
-
-            echo ""
-            echo "Binary rebuild verification completed successfully."
-            echo ""
-            echo "Note: This workflow verifies that binaries can be rebuilt from source."
-            echo "Exact binary comparison requires reproducible builds with matching"
-            echo "compiler versions and build timestamps."
-          else
+          # Verify the binary was rebuilt
+          if [ ! -f "vector_test_msvc.exe" ]; then
             echo "ERROR: Failed to rebuild vector_test_msvc.exe"
-            EXIT_CODE=1
+            exit 1
           fi
 
-          exit $EXIT_CODE
+          echo "Comparing committed binary to rebuilt version..."
+          echo ""
+
+          # Use compare_binaries.py to check if they match
+          # TODO: Update path to demo/scripts/compare_binaries.py when PR #9 merges
+          uv run ../../demo/scripts/compare_binaries.py \
+            vector_test_msvc.exe.committed \
+            vector_test_msvc.exe
+
+          COMPARE_EXIT=$?
+
+          if [ $COMPARE_EXIT -eq 0 ]; then
+            echo ""
+            echo "SUCCESS: Rebuilt binary matches the committed version."
+            exit 0
+          elif [ $COMPARE_EXIT -eq 1 ]; then
+            echo ""
+            echo "============================================================"
+            echo "ERROR: Binary mismatch detected!"
+            echo "============================================================"
+            echo ""
+            echo "The rebuilt binary differs from the committed version."
+            echo ""
+            echo "This means the checked-in binary is out of sync with the source code."
+            echo ""
+            echo "To fix this:"
+            echo "  1. Run: cd examples/vector_test && ./build_msvc_binary.sh"
+            echo "  2. Commit the updated vector_test_msvc.exe"
+            echo "  3. Push your changes"
+            echo ""
+            echo "Note: Minor differences in timestamps or debug info are expected,"
+            echo "but the core binary should match if source code is unchanged."
+            echo "============================================================"
+            exit 1
+          else
+            echo ""
+            echo "ERROR: Binary comparison failed with error code $COMPARE_EXIT"
+            exit 2
+          fi
 
       - name: Upload rebuilt binary for inspection
         if: always()
