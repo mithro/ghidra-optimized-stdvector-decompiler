@@ -212,3 +212,16 @@ This is the same license as Ghidra itself.
 - [Ghidra Documentation](https://ghidra-sre.org/)
 - [Ghidra Extension Development](https://ghidra.re/ghidra_docs/api/)
 - [Installation Guide](INSTALLATION.md)
+
+---
+
+## ⚠️ Development Notice
+
+**This tool was created almost entirely with vibe coding and AI assistance.** While it has been tested and works for the documented use cases, please be aware that:
+
+- The codebase may contain unconventional patterns or approaches
+- Edge cases may not be fully covered
+- Testing has been limited to specific scenarios
+- Use in production environments should be done with appropriate caution and testing
+
+We welcome contributions, bug reports, and improvements from the community!
