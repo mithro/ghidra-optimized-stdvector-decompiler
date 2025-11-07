@@ -239,52 +239,106 @@ else
     fi
 fi
 
-# Step 4: Check Gradle installation
+# Step 4: Check Gradle installation and version
 echo ""
 echo -e "${BLUE}Step 4: Checking Gradle installation...${NC}"
+
+# Minimum required Gradle version for Ghidra 11.4.2
+MIN_GRADLE_MAJOR=8
+MIN_GRADLE_MINOR=0
+
+# Function to check if Gradle version is sufficient
+check_gradle_version() {
+    local gradle_cmd=$1
+    local version=$($gradle_cmd --version 2>&1 | grep "^Gradle" | sed 's/Gradle //')
+    local major=$(echo "$version" | cut -d. -f1)
+    local minor=$(echo "$version" | cut -d. -f2)
+
+    echo "$version"
+
+    if [ "$major" -gt "$MIN_GRADLE_MAJOR" ]; then
+        return 0
+    elif [ "$major" -eq "$MIN_GRADLE_MAJOR" ] && [ "$minor" -ge "$MIN_GRADLE_MINOR" ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+GRADLE_OK=false
+
+# Check if gradle is available and meets minimum version
 if command -v gradle &> /dev/null; then
-    GRADLE_VERSION=$(gradle --version 2>&1 | grep "Gradle" | head -n 1)
-    print_status "Gradle found: $GRADLE_VERSION"
+    GRADLE_VERSION=$(check_gradle_version "gradle")
+    if [ $? -eq 0 ]; then
+        print_status "Gradle found: $GRADLE_VERSION (meets requirement >= $MIN_GRADLE_MAJOR.$MIN_GRADLE_MINOR)"
+        GRADLE_OK=true
+    else
+        print_warning "Gradle found but version $GRADLE_VERSION is too old (need >= $MIN_GRADLE_MAJOR.$MIN_GRADLE_MINOR)"
+        print_info "The build script will attempt to use a local Gradle installation."
+    fi
 elif [ -f "/opt/gradle/bin/gradle" ]; then
-    print_status "Gradle found at: /opt/gradle/bin/gradle"
-else
-    print_warning "Gradle not found. Required for building the VectorSimplification extension."
+    GRADLE_VERSION=$(check_gradle_version "/opt/gradle/bin/gradle")
+    if [ $? -eq 0 ]; then
+        print_status "Gradle found at: /opt/gradle/bin/gradle (version $GRADLE_VERSION)"
+        GRADLE_OK=true
+    fi
+fi
+
+# If no suitable Gradle found, offer to install from package manager or locally
+if [ "$GRADLE_OK" = false ]; then
+    print_warning "No suitable Gradle installation found."
+    print_info "Ghidra 11.4.2 requires Gradle >= $MIN_GRADLE_MAJOR.$MIN_GRADLE_MINOR"
+    echo ""
+    print_info "The extension build script can automatically download Gradle 8.10.2"
+    print_info "and install it locally (no root required) when you build the extension."
+    echo ""
 
     if [ -t 0 ]; then
-        read -p "Install Gradle? (y/n) " -n 1 -r
+        echo "Options:"
+        echo "  1. Continue - build script will download Gradle 8.10.2 locally when needed"
+        echo "  2. Install system Gradle from package manager (may be old version)"
+        echo "  3. Exit and install Gradle manually"
+        echo ""
+        read -p "Choose option (1/2/3): " -n 1 -r
         echo
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-            case $PKG_MANAGER in
-                apt-get)
-                    install_package "Gradle" "gradle" || exit 1
-                    ;;
-                dnf|yum)
-                    install_package "Gradle" "gradle" || exit 1
-                    ;;
-                pacman)
-                    install_package "Gradle" "gradle" || exit 1
-                    ;;
-                *)
-                    print_error "Unable to auto-install. Please install Gradle manually."
-                    print_info "Download from: https://gradle.org/releases/"
-                    exit 1
-                    ;;
-            esac
-
-            # Verify installation
-            if command -v gradle &> /dev/null; then
-                GRADLE_VERSION=$(gradle --version 2>&1 | grep "Gradle" | head -n 1)
-                print_status "Gradle installed successfully: $GRADLE_VERSION"
-            else
-                print_error "Gradle installation failed. Please install manually."
+        case $REPLY in
+            1)
+                print_info "Will use local Gradle installation during build."
+                GRADLE_OK=true
+                ;;
+            2)
+                case $PKG_MANAGER in
+                    apt-get)
+                        install_package "Gradle" "gradle"
+                        ;;
+                    dnf|yum)
+                        install_package "Gradle" "gradle"
+                        ;;
+                    pacman)
+                        install_package "Gradle" "gradle"
+                        ;;
+                    *)
+                        print_error "Unable to auto-install. Please install Gradle manually."
+                        print_info "Download from: https://gradle.org/releases/"
+                        exit 1
+                        ;;
+                esac
+                print_info "System Gradle installed (build script will verify version)."
+                GRADLE_OK=true
+                ;;
+            3)
+                print_info "Please install Gradle >= $MIN_GRADLE_MAJOR.$MIN_GRADLE_MINOR and run this script again."
+                print_info "Download from: https://gradle.org/releases/"
                 exit 1
-            fi
-        else
-            print_error "Gradle is required. Exiting."
-            exit 1
-        fi
+                ;;
+            *)
+                print_error "Invalid option. Exiting."
+                exit 1
+                ;;
+        esac
     else
-        print_error "Gradle required. Please install gradle and try again."
+        print_error "Gradle required. Please install Gradle >= $MIN_GRADLE_MAJOR.$MIN_GRADLE_MINOR and try again."
         exit 1
     fi
 fi
