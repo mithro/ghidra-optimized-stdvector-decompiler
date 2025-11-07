@@ -1,39 +1,32 @@
 #!/bin/bash
 set -e
 
-# Install MSVC using msvc-wine (recommended approach)
-# This downloads and unpacks MSVC components without running the installer
+# Install MSVC using winetricks vstools2019 (alternative approach)
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-TEST_DIR="$SCRIPT_DIR/test/vector_test"
-MSVC_DIR="$HOME/.msvc"
-LOG_FILE="$SCRIPT_DIR/msvc_wine_install.log"
+TEST_DIR="$SCRIPT_DIR"
+WINE_PREFIX="$HOME/.wine_vstools"
+LOG_FILE="$SCRIPT_DIR/winetricks_vstools.log"
 
 # Redirect all output to log file AND console using tee
 if [ -z "$LOGGING_ENABLED" ]; then
     export LOGGING_ENABLED=1
     echo "Logging to: $LOG_FILE"
-    echo "Starting msvc-wine installation at $(date)" > "$LOG_FILE"
+    echo "Starting winetricks vstools2019 installation at $(date)" > "$LOG_FILE"
     exec > >(tee -a "$LOG_FILE") 2>&1
 fi
 
 echo "========================================================================="
-echo "MSVC Installation Using msvc-wine"
+echo "MSVC Installation Using Winetricks vstools2019"
 echo "========================================================================="
 echo "Log file: $LOG_FILE"
 echo "Started at: $(date)"
 echo ""
-echo "This approach uses msvc-wine to download and unpack MSVC components"
-echo "without running the Visual Studio installer in Wine."
-echo ""
 
-# Step 1: Install dependencies
-echo "[1/5] Installing dependencies..."
-echo ""
-
-# Check for wine64
-if ! command -v wine64 &> /dev/null; then
-    echo "Installing Wine64..."
+# Step 1: Install Wine and winetricks
+echo "[1/3] Installing Wine and winetricks..."
+if ! command -v wine &> /dev/null; then
+    echo "Installing Wine..."
     sudo dpkg --add-architecture i386
     sudo mkdir -pm755 /etc/apt/keyrings
     sudo wget -O /etc/apt/keyrings/winehq-archive.key https://dl.winehq.org/wine-builds/winehq.key
@@ -67,89 +60,87 @@ if ! command -v wine64 &> /dev/null; then
     fi
 
     sudo apt update
-    sudo apt install -y --install-recommends winehq-stable
+    sudo apt install -y --install-recommends winehq-stable winetricks
 else
-    echo "✓ Wine64 already installed: $(wine64 --version)"
+    echo "✓ Wine already installed: $(wine --version)"
+    if ! command -v winetricks &> /dev/null; then
+        sudo apt install -y winetricks
+    fi
 fi
 
-# Check for required packages
-echo "Installing msitools, libgcab, python3..."
-sudo apt-get install -y python3 msitools libgcab-1.0-0 ca-certificates winbind
-
-# Step 2: Clone or update msvc-wine
+# Step 2: Set up Wine prefix and install vstools2019
 echo ""
-echo "[2/5] Setting up msvc-wine..."
-MSVC_WINE_DIR="$SCRIPT_DIR/tools/msvc-wine"
-
-if [ -d "$MSVC_WINE_DIR" ]; then
-    echo "msvc-wine already cloned, updating..."
-    cd "$MSVC_WINE_DIR"
-    git pull
-else
-    echo "Cloning msvc-wine..."
-    mkdir -p "$SCRIPT_DIR/tools"
-    cd "$SCRIPT_DIR/tools"
-    git clone https://github.com/mstorsjo/msvc-wine.git
-    cd msvc-wine
-fi
-
-# Step 3: Download MSVC components
-echo ""
-echo "[3/5] Downloading MSVC and Windows SDK..."
-echo "This will download approximately 1-2GB of data. Please be patient..."
-echo ""
-
-if [ ! -d "$MSVC_DIR/vc/tools" ]; then
-    echo "Downloading to $MSVC_DIR ..."
-    ./vsdownload.py --accept-license --dest "$MSVC_DIR"
-    echo ""
-    echo "✓ Download complete"
-else
-    echo "✓ MSVC already downloaded to $MSVC_DIR"
-fi
-
-# Step 4: Install msvc-wine wrappers
-echo ""
-echo "[4/5] Installing msvc-wine wrapper scripts..."
-./install.sh "$MSVC_DIR"
-echo "✓ Wrappers installed"
-
-# Step 5: Compile test program
-echo ""
-echo "[5/5] Compiling vector_test.cpp with MSVC..."
-cd "$TEST_DIR"
-
-# Find the x64 compiler
-MSVC_BIN="$MSVC_DIR/bin/x64"
-if [ ! -d "$MSVC_BIN" ]; then
-    echo "ERROR: MSVC bin directory not found at $MSVC_BIN"
-    exit 1
-fi
-
-echo "Using MSVC from: $MSVC_BIN"
-echo ""
-
-# Set up environment
-export PATH="$MSVC_BIN:$PATH"
-export CC=cl
-export CXX=cl
+echo "[2/3] Installing Visual Studio Build Tools 2019 via winetricks..."
+export WINEPREFIX="$WINE_PREFIX"
+export WINEARCH=win64
 export WINEDEBUG=-all
 
-# Verify cl.exe is available
-if ! command -v cl &> /dev/null; then
-    echo "ERROR: cl command not found in PATH"
-    echo "PATH=$PATH"
+echo "Wine prefix: $WINE_PREFIX"
+echo ""
+echo "This will download and install VS Build Tools 2019."
+echo "Running in unattended mode (no GUI)..."
+echo "This may take 15-30 minutes..."
+echo ""
+
+# Install vstools2019 in unattended mode with --force to bypass SHA256 checks
+# Microsoft frequently updates installers, causing hash mismatches
+winetricks --unattended --force vstools2019
+
+echo ""
+echo "Installation complete. Waiting for processes to settle..."
+sleep 10
+wineserver -k || true
+sleep 5
+
+# Step 3: Find cl.exe and compile
+echo ""
+echo "[3/3] Finding MSVC compiler and building test..."
+
+# Find cl.exe
+echo "Searching for cl.exe..."
+CL_EXE=$(find "$WINE_PREFIX" -name "cl.exe" -path "*/x64/*" 2>/dev/null | head -1) || true
+
+if [ -z "$CL_EXE" ]; then
+    echo "Searching for any cl.exe..."
+    CL_EXE=$(find "$WINE_PREFIX" -name "cl.exe" 2>/dev/null | grep -i "x64\|amd64" | head -1) || true
+fi
+
+if [ -z "$CL_EXE" ]; then
+    echo ""
+    echo "========================================================================="
+    echo "ERROR: cl.exe not found after installation"
+    echo "========================================================================="
+    echo ""
+    echo "Installed files in Wine prefix:"
+    find "$WINE_PREFIX" -type f -name "*.exe" 2>/dev/null | grep -i "visual\|build\|vc" | head -20
+    echo ""
+    echo "This may mean vstools2019 didn't install correctly."
+    echo "Try the msvc-wine approach instead: ./install_msvc_wine.sh"
     exit 1
 fi
 
-echo "Compiler version:"
-cl 2>&1 | head -5
+echo "✓ Found MSVC compiler: $CL_EXE"
+CL_DIR=$(dirname "$CL_EXE")
 
+# Compile the test
 echo ""
-echo "Compiling with MSVC..."
+echo "Compiling vector_test.cpp with MSVC..."
+cd "$TEST_DIR"
 
-# Compile
-cl /Zi /EHsc /std:c++17 /MD /Fe:vector_test_msvc.exe vector_test.cpp /link /DEBUG:FULL
+# Create batch file for compilation
+CL_WIN_PATH=$(echo "$CL_DIR" | sed "s|$WINE_PREFIX/drive_c|C:|" | sed 's|/|\\|g')
+
+cat > compile.bat << 'EOF'
+@echo off
+echo Setting up MSVC environment...
+call "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
+echo Compiling...
+cl.exe /Zi /EHsc /std:c++17 /MD /Fe:vector_test_msvc.exe vector_test.cpp /link /DEBUG:FULL
+echo Done.
+EOF
+
+echo "Running compilation in Wine..."
+WINEPREFIX="$WINE_PREFIX" wine cmd /c compile.bat 2>&1 | tee compile.log
 
 # Check results
 if [ -f "vector_test_msvc.exe" ] && [ -f "vector_test_msvc.pdb" ]; then
@@ -159,14 +150,6 @@ if [ -f "vector_test_msvc.exe" ] && [ -f "vector_test_msvc.pdb" ]; then
     echo "========================================================================="
     ls -lh vector_test_msvc.exe vector_test_msvc.pdb
     file vector_test_msvc.exe
-
-    echo ""
-    echo "Verifying binary is Windows PE format..."
-    file vector_test_msvc.exe | grep -q "PE32+" && echo "✓ Correct format: PE32+ (64-bit Windows)"
-
-    echo ""
-    echo "Verifying PDB debug symbols..."
-    ls -lh vector_test_msvc.pdb && echo "✓ PDB file created"
 
     echo ""
     echo "Testing with Ghidra..."
@@ -180,21 +163,15 @@ if [ -f "vector_test_msvc.exe" ] && [ -f "vector_test_msvc.pdb" ]; then
             -overwrite \
             -scriptPath "$TEST_DIR" \
             -postScript test_extension.py 2>&1 | tee "$TEST_DIR/ghidra_test.log" | tail -50
-    else
-        echo "Ghidra not found at $GHIDRA_DIR, skipping test"
     fi
 
     echo ""
     echo "Committing results..."
-    git add test/vector_test/vector_test_msvc.exe test/vector_test/vector_test_msvc.pdb 2>/dev/null || true
-    git add tools/msvc-wine 2>/dev/null || true
+    git add examples/vector_test/vector_test_msvc.exe examples/vector_test/vector_test_msvc.pdb 2>/dev/null || true
     git commit -m "test: Add MSVC-compiled test binary with PDB
 
-Compiled with genuine MSVC via msvc-wine.
-Full debug symbols and native MSVC std::vector layout.
-
-MSVC installed to: $MSVC_DIR
-Uses msvc-wine from: https://github.com/mstorsjo/msvc-wine" || echo "Nothing new to commit"
+Compiled with VS Build Tools 2019 via winetricks vstools2019.
+Full debug symbols and MSVC std::vector layout." || echo "Nothing new to commit"
 
     echo ""
     echo "========================================================================="
@@ -202,20 +179,13 @@ Uses msvc-wine from: https://github.com/mstorsjo/msvc-wine" || echo "Nothing new
     echo "========================================================================="
     echo "Completed at: $(date)"
     echo "Full log saved to: $LOG_FILE"
-    echo ""
-    echo "To compile more programs with MSVC:"
-    echo "  export PATH=\"$MSVC_BIN:\$PATH\""
-    echo "  export CC=cl CXX=cl"
-    echo "  cl /EHsc /std:c++17 yourfile.cpp"
 
 else
     echo ""
     echo "========================================================================="
     echo "ERROR: Compilation failed"
     echo "========================================================================="
-    echo "Completed at: $(date)"
-    echo ""
-    echo "Check output above for errors"
-    echo "Full log saved to: $LOG_FILE"
+    echo "Check compile.log for details"
+    cat compile.log || true
     exit 1
 fi

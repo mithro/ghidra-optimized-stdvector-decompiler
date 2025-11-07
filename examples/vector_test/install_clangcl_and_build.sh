@@ -5,7 +5,7 @@ set -e
 # This produces real MSVC-compatible binaries with PDB files, but installs easily on Linux
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-TEST_DIR="$SCRIPT_DIR/test/vector_test"
+TEST_DIR="$SCRIPT_DIR"
 LOG_FILE="$SCRIPT_DIR/clangcl_build.log"
 
 # Redirect all output to log file AND console using tee
@@ -182,7 +182,7 @@ if [ -f "vector_test_msvc.exe" ] && [ -f "vector_test_msvc.pdb" ]; then
 
     echo ""
     echo "Committing results..."
-    git add test/vector_test/vector_test_msvc.exe test/vector_test/vector_test_msvc.pdb 2>/dev/null || true
+    git add examples/vector_test/vector_test_msvc.exe examples/vector_test/vector_test_msvc.pdb 2>/dev/null || true
     git commit -m "test: Add MSVC-compatible test binary with PDB
 
 Compiled with clang-cl (LLVM's MSVC-compatible compiler).
