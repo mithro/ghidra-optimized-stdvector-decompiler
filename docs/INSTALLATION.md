@@ -1,6 +1,6 @@
 # Ghidra Setup Guide
 
-This guide explains how to set up Ghidra with all modules and the custom VectorSimplification extension.
+This guide explains how to set up Ghidra with all modules and the custom OptimizedVectorDecompiler extension.
 
 ## Quick Start
 
@@ -16,7 +16,7 @@ This will:
 3. Check and optionally install Java 21
 4. Check and optionally install Gradle
 5. Create necessary user directories
-6. Build the VectorSimplification extension
+6. Build the OptimizedVectorDecompiler extension
 7. Install the extension to Ghidra (both GUI and headless modes)
 8. **Automatically enable the extension** (no manual GUI configuration needed!)
 9. Verify the installation
@@ -66,10 +66,10 @@ https://github.com/NationalSecurityAgency/ghidra/releases
 
 Extract to `$HOME/tools/ghidra/` (or set `GHIDRA_INSTALL_DIR`)
 
-### 2. Build VectorSimplification Extension
+### 2. Build OptimizedVectorDecompiler Extension
 
 ```bash
-cd tools/ghidra_extensions/VectorSimplification
+cd tools/ghidra_extensions/OptimizedVectorDecompiler
 export GHIDRA_INSTALL_DIR=$HOME/tools/ghidra
 bash build.sh
 ```
@@ -78,19 +78,19 @@ bash build.sh
 
 **Option A: System-wide installation**
 ```bash
-unzip dist/ghidra_11.4.2_PUBLIC_*_VectorSimplification.zip -d $GHIDRA_INSTALL_DIR/Extensions/Ghidra/
+unzip dist/ghidra_11.4.2_PUBLIC_*_OptimizedVectorDecompiler.zip -d $GHIDRA_INSTALL_DIR/Extensions/Ghidra/
 ```
 
 **Option B: User installation**
 ```bash
-unzip dist/ghidra_11.4.2_PUBLIC_*_VectorSimplification.zip -d ~/.ghidra/.ghidra_11.4.2_PUBLIC/Extensions/
+unzip dist/ghidra_11.4.2_PUBLIC_*_OptimizedVectorDecompiler.zip -d ~/.ghidra/.ghidra_11.4.2_PUBLIC/Extensions/
 ```
 
 ### 4. Install JAR for Headless Mode
 
 For headless analysis support:
 ```bash
-cp build/libs/VectorSimplification.jar $GHIDRA_INSTALL_DIR/Ghidra/Features/Decompiler/lib/
+cp build/libs/OptimizedVectorDecompiler.jar $GHIDRA_INSTALL_DIR/Ghidra/Features/Decompiler/lib/
 ```
 
 ### 5. Enable Extension in Ghidra
@@ -106,7 +106,7 @@ cat > ~/.ghidra/.ghidra_11.4.2_PUBLIC/preferences/ExtensionProvider <<'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <FILE_INFO>
     <BASIC_INFO>
-        <STATE NAME="Extension States" TYPE="string" VALUE="VectorSimplification:true;" />
+        <STATE NAME="Extension States" TYPE="string" VALUE="OptimizedVectorDecompiler:true;" />
     </BASIC_INFO>
 </FILE_INFO>
 EOF
@@ -115,7 +115,7 @@ EOF
 **OR via GUI:**
 1. Launch Ghidra: `$GHIDRA_INSTALL_DIR/ghidraRun`
 2. Go to: **File → Configure**
-3. Check: **VectorSimplification**
+3. Check: **OptimizedVectorDecompiler**
 4. Restart Ghidra
 
 ## Configuration
@@ -134,7 +134,7 @@ export GHIDRA_INSTALL_DIR=/opt/ghidra
 
 ### Extension Configuration
 
-The VectorSimplification extension is configured via:
+The OptimizedVectorDecompiler extension is configured via:
 - Module.manifest: Extension metadata
 - extension.properties: Extension properties
 - build.gradle: Build configuration
@@ -176,7 +176,7 @@ Expected output:
 
 ## Extension Features
 
-The **VectorSimplification** extension detects and simplifies MSVC `std::vector` patterns:
+The **OptimizedVectorDecompiler** extension detects and simplifies MSVC `std::vector` patterns:
 
 ### Supported Patterns
 
@@ -208,14 +208,14 @@ This means your Gradle version is too old (< 8.0). Solutions:
 
 **Option 1: Let the build script handle it (recommended)**
 ```bash
-cd tools/ghidra_extensions/VectorSimplification
+cd tools/ghidra_extensions/OptimizedVectorDecompiler
 bash build.sh
 # Answer 'y' when prompted to install Gradle 8.10.2 locally
 ```
 
 **Option 2: Install Gradle manually**
 ```bash
-cd tools/ghidra_extensions/VectorSimplification
+cd tools/ghidra_extensions/OptimizedVectorDecompiler
 bash install_gradle.sh
 ```
 
@@ -227,12 +227,12 @@ bash install_gradle.sh
 
 1. Check installation:
    ```bash
-   ls $GHIDRA_INSTALL_DIR/Extensions/Ghidra/VectorSimplification
+   ls $GHIDRA_INSTALL_DIR/Extensions/Ghidra/OptimizedVectorDecompiler
    ```
 
 2. Check Module.manifest:
    ```bash
-   cat $GHIDRA_INSTALL_DIR/Extensions/Ghidra/VectorSimplification/Module.manifest
+   cat $GHIDRA_INSTALL_DIR/Extensions/Ghidra/OptimizedVectorDecompiler/Module.manifest
    ```
 
 3. Check Ghidra logs:
@@ -244,14 +244,14 @@ bash install_gradle.sh
 
 1. Verify JAR installation:
    ```bash
-   ls $GHIDRA_INSTALL_DIR/Ghidra/Features/Decompiler/lib/VectorSimplification.jar
+   ls $GHIDRA_INSTALL_DIR/Ghidra/Features/Decompiler/lib/OptimizedVectorDecompiler.jar
    ```
 
 2. Rebuild and reinstall:
    ```bash
-   cd tools/ghidra_extensions/VectorSimplification
+   cd tools/ghidra_extensions/OptimizedVectorDecompiler
    bash build.sh
-   cp build/libs/VectorSimplification.jar $GHIDRA_INSTALL_DIR/Ghidra/Features/Decompiler/lib/
+   cp build/libs/OptimizedVectorDecompiler.jar $GHIDRA_INSTALL_DIR/Ghidra/Features/Decompiler/lib/
    ```
 
 ### Build Errors
@@ -263,7 +263,7 @@ bash install_gradle.sh
 
 2. Check Gradle:
    ```bash
-   cd tools/ghidra_extensions/VectorSimplification
+   cd tools/ghidra_extensions/OptimizedVectorDecompiler
    ./gradlew --version
    ```
 
@@ -301,7 +301,7 @@ cd tools/plugin_installers/ghidragpt
 ### Building from Source
 
 ```bash
-cd tools/ghidra_extensions/VectorSimplification
+cd tools/ghidra_extensions/OptimizedVectorDecompiler
 gradle -PGHIDRA_INSTALL_DIR=/path/to/ghidra buildExtension
 ```
 
@@ -328,7 +328,7 @@ Rebuild and check stderr output.
 
 - [Ghidra Documentation](https://ghidra-sre.org/)
 - [Extension Development Guide](https://ghidra.re/ghidra_docs/api/)
-- [VectorSimplification Source](tools/ghidra_extensions/VectorSimplification/)
+- [OptimizedVectorDecompiler Source](tools/ghidra_extensions/OptimizedVectorDecompiler/)
 - [Test Binaries](test/vector_test/)
 
 ## License

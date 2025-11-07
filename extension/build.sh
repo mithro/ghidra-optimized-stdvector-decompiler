@@ -1,5 +1,5 @@
 #!/bin/bash
-# Build script for VectorSimplification Ghidra extension
+# Build script for OptimizedVectorDecompiler Ghidra extension
 
 set -e
 
@@ -18,7 +18,7 @@ echo "Using Ghidra installation: $GHIDRA_INSTALL_DIR"
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$SCRIPT_DIR"
 
-echo "Building VectorSimplification extension..."
+echo "Building OptimizedVectorDecompiler extension..."
 echo ""
 
 # Minimum required Gradle version for Ghidra 11.4.2
@@ -147,7 +147,7 @@ if [ -n "$DIST_FILE" ]; then
     echo "To install:"
     echo "1. Unzip to $GHIDRA_INSTALL_DIR/Extensions/Ghidra/"
     echo "2. Restart Ghidra"
-    echo "3. File → Configure → Check 'VectorSimplification'"
+    echo "3. File → Configure → Check 'OptimizedVectorDecompiler'"
     echo ""
     echo "Or copy directly:"
     echo "    cp $DIST_FILE $GHIDRA_INSTALL_DIR/Extensions/Ghidra/"

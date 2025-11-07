@@ -1,10 +1,10 @@
-# VectorSimplification - Ghidra Extension for MSVC std::vector
+# Optimized std::vector Decompiler - Ghidra Plugin
 
-A Ghidra extension that automatically simplifies MSVC `std::vector` access patterns in decompiled code, making reverse engineering of C++ binaries significantly easier.
+A Ghidra plugin which improves the decompilation output of std::vectors in binaries that are compiled with optimization on (Currently MSVC++ focused).
 
 ## Overview
 
-When decompiling Windows C++ binaries compiled with MSVC, Ghidra shows low-level pointer arithmetic instead of clean vector operations:
+When decompiling optimized Windows C++ binaries compiled with MSVC, aggressive compiler optimizations transform high-level `std::vector` operations into complex pointer arithmetic. Ghidra's decompiler output shows these low-level patterns instead of the original clean vector operations, making reverse engineering significantly harder.
 
 **Before (Raw Decompiled Output):**
 ```c
@@ -15,7 +15,7 @@ value = *_Myfirst;  // Direct pointer access
 capacity = (_Myend - _Myfirst) >> 3;
 ```
 
-**After (With VectorSimplification):**
+**After (With Optimized Vector Decompiler):**
 ```c
 if (vec->empty()) {  // Much clearer!
     doSomething();
@@ -23,6 +23,8 @@ if (vec->empty()) {  // Much clearer!
 value = vec->data();
 capacity = vec->capacity();
 ```
+
+This plugin automatically detects and transforms these optimized patterns back into readable C++ method calls, dramatically improving the decompilation quality for reverse engineering optimized binaries.
 
 ## Features
 
@@ -55,8 +57,8 @@ capacity = vec->capacity();
 
 1. **Clone this repository:**
    ```bash
-   git clone https://github.com/YOUR_USERNAME/ghidra-vector-extension.git
-   cd ghidra-vector-extension
+   git clone https://github.com/YOUR_USERNAME/ghidra-optimized-stdvector-decompiler.git
+   cd ghidra-optimized-stdvector-decompiler
    ```
 
 2. **Run the setup script:**
@@ -160,12 +162,12 @@ For more details, see [docs/INSTALLATION.md](docs/INSTALLATION.md).
 
 1. Check installation:
    ```bash
-   ls $GHIDRA_INSTALL_DIR/Extensions/Ghidra/VectorSimplification
+   ls $GHIDRA_INSTALL_DIR/Extensions/Ghidra/OptimizedVectorDecompiler
    ```
 
 2. Verify it's enabled:
    - File → Configure → Extensions
-   - Check that "VectorSimplification" is checked
+   - Check that "OptimizedVectorDecompiler" is checked
 
 3. Check logs:
    ```bash

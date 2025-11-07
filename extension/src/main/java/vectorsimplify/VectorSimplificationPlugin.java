@@ -7,19 +7,19 @@ import ghidra.framework.plugintool.*;
 import ghidra.framework.plugintool.util.PluginStatus;
 
 /**
- * Main plugin class for Vector Simplification extension.
+ * Main plugin class for Optimized Vector Decompiler extension.
  *
- * This plugin registers custom simplification rules with the Ghidra decompiler
- * to recognize std::vector pointer arithmetic patterns and replace them with
- * idiomatic C++ method calls.
+ * This plugin improves decompilation of optimized binaries by recognizing
+ * std::vector pointer arithmetic patterns and replacing them with idiomatic
+ * C++ method calls. Specifically designed to handle MSVC++ optimization patterns.
  */
 //@formatter:off
 @PluginInfo(
 	status = PluginStatus.RELEASED,
-	packageName = "VectorSimplification",
+	packageName = "OptimizedVectorDecompiler",
 	category = PluginCategoryNames.ANALYSIS,
-	shortDescription = "Simplifies vector operations",
-	description = "Transforms std::vector pointer arithmetic into C++ method calls during decompilation"
+	shortDescription = "Improves std::vector decompilation in optimized binaries",
+	description = "Transforms std::vector pointer arithmetic from optimized MSVC binaries into readable C++ method calls"
 )
 //@formatter:on
 public class VectorSimplificationPlugin extends ProgramPlugin {
