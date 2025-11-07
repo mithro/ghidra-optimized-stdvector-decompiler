@@ -458,7 +458,7 @@ if [ -d "$PLUGIN_DIR" ]; then
             PLUGIN_NAME=$(basename "$plugin")
             INSTALL_SCRIPT="$plugin/install_${PLUGIN_NAME}.sh"
             if [ -f "$INSTALL_SCRIPT" ]; then
-                ((PLUGIN_COUNT++))
+                PLUGIN_COUNT=$((PLUGIN_COUNT + 1))
                 print_info "Found plugin: $PLUGIN_NAME"
             fi
         fi
