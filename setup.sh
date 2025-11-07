@@ -1,5 +1,5 @@
 #!/bin/bash
-# Automated setup script for VectorSimplification Ghidra Extension
+# Automated setup script for Optimized Vector Decompiler Ghidra Plugin
 # Builds and installs the extension with minimal configuration required
 
 set -euo pipefail
@@ -34,7 +34,7 @@ print_info() {
 }
 
 echo -e "${BLUE}======================================================================${NC}"
-echo -e "${BLUE}      VectorSimplification Ghidra Extension - Setup${NC}"
+echo -e "${BLUE}      Optimized Vector Decompiler Ghidra Plugin - Setup${NC}"
 echo -e "${BLUE}======================================================================${NC}"
 echo ""
 
@@ -76,7 +76,7 @@ print_status "User directories created"
 
 # Step 4: Build extension
 echo ""
-echo -e "${BLUE}Step 4: Building VectorSimplification extension...${NC}"
+echo -e "${BLUE}Step 4: Building OptimizedVectorDecompiler extension...${NC}"
 EXTENSION_DIR="$SCRIPT_DIR/extension"
 
 cd "$EXTENSION_DIR"
@@ -115,7 +115,7 @@ print_info "Extracting to system extensions directory..."
 unzip -q -o "$DIST_FILE" -d "$SYSTEM_EXT_DIR/"
 
 # Also copy JAR to Decompiler lib for headless mode
-JAR_FILE="$EXTENSION_DIR/build/libs/VectorSimplification.jar"
+JAR_FILE="$EXTENSION_DIR/build/libs/OptimizedVectorDecompiler.jar"
 if [ -f "$JAR_FILE" ]; then
     DECOMPILER_LIB="$GHIDRA_INSTALL_DIR/Ghidra/Features/Decompiler/lib"
     if [ -d "$DECOMPILER_LIB" ]; then
@@ -125,7 +125,7 @@ if [ -f "$JAR_FILE" ]; then
     fi
 fi
 
-print_status "VectorSimplification extension installed"
+print_status "OptimizedVectorDecompiler extension installed"
 
 # Step 6: Auto-enable extension
 echo ""
@@ -139,17 +139,17 @@ if [ ! -f "$EXTENSION_PREFS" ]; then
 <?xml version="1.0" encoding="UTF-8"?>
 <FILE_INFO>
     <BASIC_INFO>
-        <STATE NAME="Extension States" TYPE="string" VALUE="VectorSimplification:true;" />
+        <STATE NAME="Extension States" TYPE="string" VALUE="OptimizedVectorDecompiler:true;" />
     </BASIC_INFO>
 </FILE_INFO>
 EOF
     print_status "Extension auto-enabled for GUI mode"
 else
-    if grep -q "VectorSimplification" "$EXTENSION_PREFS"; then
-        sed -i 's/VectorSimplification:[^;]*/VectorSimplification:true/g' "$EXTENSION_PREFS"
+    if grep -q "OptimizedVectorDecompiler" "$EXTENSION_PREFS"; then
+        sed -i 's/OptimizedVectorDecompiler:[^;]*/OptimizedVectorDecompiler:true/g' "$EXTENSION_PREFS"
         print_status "Extension state updated to enabled"
     else
-        sed -i 's/VALUE="\([^"]*\)"/VALUE="\1VectorSimplification:true;"/g' "$EXTENSION_PREFS"
+        sed -i 's/VALUE="\([^"]*\)"/VALUE="\1OptimizedVectorDecompiler:true;"/g' "$EXTENSION_PREFS"
         print_status "Extension added to enabled list"
     fi
 fi
@@ -160,16 +160,16 @@ print_info "Extension is enabled for both GUI and headless modes"
 echo ""
 echo -e "${BLUE}Step 7: Verifying installation...${NC}"
 
-if [ -d "$SYSTEM_EXT_DIR/VectorSimplification" ]; then
-    print_status "VectorSimplification directory found"
+if [ -d "$SYSTEM_EXT_DIR/OptimizedVectorDecompiler" ]; then
+    print_status "OptimizedVectorDecompiler directory found"
 else
-    print_warning "VectorSimplification directory not found"
+    print_warning "OptimizedVectorDecompiler directory not found"
 fi
 
-if [ -f "$DECOMPILER_LIB/VectorSimplification.jar" ]; then
-    print_status "VectorSimplification JAR installed"
+if [ -f "$DECOMPILER_LIB/OptimizedVectorDecompiler.jar" ]; then
+    print_status "OptimizedVectorDecompiler JAR installed"
 else
-    print_warning "VectorSimplification JAR not found in Decompiler lib"
+    print_warning "OptimizedVectorDecompiler JAR not found in Decompiler lib"
 fi
 
 # Summary
@@ -179,12 +179,12 @@ echo -e "${GREEN}                    Setup Complete!${NC}"
 echo -e "${BLUE}======================================================================${NC}"
 echo ""
 echo "Ghidra installation: $GHIDRA_INSTALL_DIR"
-echo "Extension installed: VectorSimplification"
+echo "Extension installed: OptimizedVectorDecompiler"
 echo -e "Extension status: ${GREEN}Automatically enabled${NC}"
 echo ""
 echo -e "${YELLOW}Using Ghidra GUI:${NC}"
 echo "  Start Ghidra: $GHIDRA_INSTALL_DIR/ghidraRun"
-echo "  The VectorSimplification extension is already enabled!"
+echo "  The OptimizedVectorDecompiler extension is already enabled!"
 echo ""
 echo -e "${YELLOW}Using headless analysis:${NC}"
 echo "  $GHIDRA_INSTALL_DIR/support/analyzeHeadless <project> <name> -import <binary>"
