@@ -4,7 +4,7 @@ set -e
 # Fixed script to install MSVC++ Build Tools in Wine with proper .NET dependencies
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-TEST_DIR="$SCRIPT_DIR/test/vector_test"
+TEST_DIR="$SCRIPT_DIR"
 WINE_PREFIX="$HOME/.wine_msvc"
 LOG_FILE="$SCRIPT_DIR/msvc_install.log"
 
@@ -267,8 +267,8 @@ if [ -f "vector_test_msvc.exe" ] && [ -f "vector_test_msvc.pdb" ]; then
 
     echo ""
     echo "Committing results..."
-    git add test/vector_test/vector_test_msvc.exe test/vector_test/vector_test_msvc.pdb 2>/dev/null || true
-    git add test/vector_test/compile.bat tools/msvc_buildtools 2>/dev/null || true
+    git add examples/vector_test/vector_test_msvc.exe examples/vector_test/vector_test_msvc.pdb 2>/dev/null || true
+    git add examples/vector_test/compile.bat tools/msvc_buildtools 2>/dev/null || true
     git commit -m "test: Add MSVC-compiled test binary with PDB
 
 Compiled with Visual Studio Build Tools via Wine.

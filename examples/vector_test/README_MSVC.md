@@ -7,7 +7,7 @@ This directory contains test code for the VectorSimplification Ghidra extension.
 Run the automated installation script:
 
 ```bash
-cd /home/user/ghidra-optimized-stdvector-decompiler
+# From examples/vector_test directory
 ./install_msvc_and_build.sh
 ```
 

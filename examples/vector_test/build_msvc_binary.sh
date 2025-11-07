@@ -5,7 +5,7 @@ set -e
 # This script downloads MSVC headers/libs and compiles vector_test.cpp
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-TEST_DIR="$SCRIPT_DIR/test/vector_test"
+TEST_DIR="$SCRIPT_DIR"
 LOG_FILE="$SCRIPT_DIR/build_msvc.log"
 
 # Redirect all output to log file AND console

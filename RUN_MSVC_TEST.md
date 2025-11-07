@@ -5,8 +5,8 @@
 **Simply run:**
 
 ```bash
-cd /home/user/ghidra-optimized-stdvector-decompiler
-./install_msvc_and_build.sh
+# From repository root
+./examples/vector_test/install_msvc_and_build.sh
 ```
 
 This will automatically:
@@ -33,14 +33,14 @@ Our test currently uses GCC, so patterns don't match. We need MSVC to properly t
 ## What You'll Get
 
 After running the script:
-- `test/vector_test/vector_test_msvc.exe` - MSVC-compiled 64-bit PE executable
-- `test/vector_test/vector_test_msvc.pdb` - Full debug symbols
+- `examples/vector_test/vector_test_msvc.exe` - MSVC-compiled 64-bit PE executable
+- `examples/vector_test/vector_test_msvc.pdb` - Full debug symbols
 - Ghidra test results showing detected vector patterns
 - Git commit with the MSVC binary
 
 ## If The Script Fails
 
-See `test/vector_test/README_MSVC.md` for:
+See `examples/vector_test/README_MSVC.md` for:
 - Manual installation steps
 - Troubleshooting guide
 - Alternative approaches

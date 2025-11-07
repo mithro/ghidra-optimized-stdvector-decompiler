@@ -31,7 +31,7 @@ This approach uses the [msvc-wine](https://github.com/mstorsjo/msvc-wine) projec
 
 **To use**:
 ```bash
-cd ~/github/mithro/ghidra-optimized-stdvector-decompiler
+# From examples/vector_test directory
 ./install_msvc_wine.sh
 ```
 
@@ -114,7 +114,7 @@ Just compile on a real Windows machine with Visual Studio or Build Tools.
 # https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022
 
 # Open "x64 Native Tools Command Prompt"
-cd test\vector_test
+cd examples\vector_test
 cl.exe /Zi /EHsc /std:c++17 /MD /Fe:vector_test_msvc.exe vector_test.cpp /link /DEBUG:FULL
 
 # Copy the .exe and .pdb back to this repository
@@ -143,14 +143,14 @@ jobs:
       - uses: microsoft/setup-msbuild@v1
       - name: Compile test binary
         run: |
-          cd test\vector_test
+          cd examples\vector_test
           cl.exe /Zi /EHsc /std:c++17 /MD /Fe:vector_test_msvc.exe vector_test.cpp /link /DEBUG:FULL
       - uses: actions/upload-artifact@v3
         with:
           name: msvc-binary
           path: |
-            test/vector_test/vector_test_msvc.exe
-            test/vector_test/vector_test_msvc.pdb
+            examples/vector_test/vector_test_msvc.exe
+            examples/vector_test/vector_test_msvc.pdb
 ```
 
 ## Option 7: MinGW-w64 Cross-Compiler (Not MSVC-Compatible)
@@ -180,13 +180,13 @@ Our Ghidra extension specifically looks for offsets 0x8, 0x10, 0x18, so GCC bina
 
 ## Current Recommendation
 
-**For Tim (or anyone with the failed Wine installation)**:
+**For users on Linux**:
 
 ### Best Option: msvc-wine (Option 1)
 
 This is the most reliable Linux-only approach:
 ```bash
-cd ~/github/mithro/ghidra-optimized-stdvector-decompiler
+# From examples/vector_test directory
 ./install_msvc_wine.sh
 ```
 
@@ -225,7 +225,7 @@ Once you have `vector_test_msvc.exe` and `vector_test_msvc.pdb`:
 
 ```bash
 # Test with Ghidra
-cd test/vector_test
+cd examples/vector_test
 python3 test_extension.py
 
 # Or run full analysis
@@ -249,4 +249,4 @@ The output should show:
 
 - Check the install logs: `msvc_install.log` or `clangcl_build.log`
 - Check what Wine installed: `./check_wine_msvc.sh`
-- Look at Ghidra test output: `test/vector_test/ghidra_test.log`
+- Look at Ghidra test output: `examples/vector_test/ghidra_test.log`
