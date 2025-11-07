@@ -1,0 +1,120 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: ['**']
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Extension
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        java-version: ['21']
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ matrix.java-version }}
+          cache: 'gradle'
+
+      - name: Setup Ghidra
+        uses: ./.github/actions/setup-ghidra
+        with:
+          ghidra-version: '11.4.2'
+
+      - name: Build extension
+        run: |
+          cd extension
+          chmod +x build.sh
+          ./build.sh
+
+      - name: Upload JAR artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: extension-jar-java${{ matrix.java-version }}
+          path: extension/build/libs/*.jar
+          retention-days: 7
+
+  test:
+    name: Test with Ghidra ${{ matrix.ghidra-version }}
+    runs-on: ubuntu-latest
+    needs: build
+    strategy:
+      matrix:
+        ghidra-version: ['11.4.1', '11.4.2']
+        java-version: ['21']
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ matrix.java-version }}
+
+      - name: Setup Ghidra
+        uses: ./.github/actions/setup-ghidra
+        with:
+          ghidra-version: ${{ matrix.ghidra-version }}
+
+      - name: Download extension JAR
+        uses: actions/download-artifact@v4
+        with:
+          name: extension-jar-java${{ matrix.java-version }}
+          path: extension/build/libs/
+
+      - name: Install extension to Ghidra
+        run: |
+          mkdir -p "$GHIDRA_INSTALL_DIR/Extensions/Ghidra"
+          cp extension/build/libs/*.jar "$GHIDRA_INSTALL_DIR/Extensions/Ghidra/"
+          echo "Extension installed to $GHIDRA_INSTALL_DIR/Extensions/Ghidra/"
+          ls -lh "$GHIDRA_INSTALL_DIR/Extensions/Ghidra/"
+
+      - name: Copy extension to Decompiler lib (headless mode)
+        run: |
+          mkdir -p "$GHIDRA_INSTALL_DIR/Ghidra/Features/Decompiler/lib"
+          cp extension/build/libs/*.jar "$GHIDRA_INSTALL_DIR/Ghidra/Features/Decompiler/lib/"
+
+      - name: Setup Python and uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Create temporary Ghidra project directory
+        run: |
+          mkdir -p /tmp/ghidra_test_project
+
+      - name: Run integration tests
+        run: |
+          export PATH="$HOME/.cargo/bin:$PATH"
+          cd examples/vector_test
+
+          # Run Ghidra headless analysis with test script
+          "$GHIDRA_INSTALL_DIR/support/analyzeHeadless" \
+            /tmp/ghidra_test_project TestProject \
+            -import vector_test_msvc.exe \
+            -postScript test_transformation.py \
+            -noanalysis
+        env:
+          GHIDRA_INSTALL_DIR: ${{ env.GHIDRA_INSTALL_DIR }}
+
+      - name: Upload test logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-logs-ghidra${{ matrix.ghidra-version }}
+          path: |
+            **/*.log
+            /tmp/*.log
+          retention-days: 7
