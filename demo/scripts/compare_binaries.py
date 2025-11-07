@@ -2,7 +2,6 @@
 """Compare two binary files and report differences."""
 
 import sys
-import os
 from pathlib import Path
 
 
