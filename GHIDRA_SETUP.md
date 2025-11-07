@@ -27,14 +27,28 @@ The script will prompt you to install any missing dependencies automatically.
 The setup script can automatically install these dependencies on supported systems (Ubuntu/Debian, Fedora/RHEL, Arch):
 
 - **Java 17 or later** (script installs OpenJDK 21)
-- **Gradle** (for building the extension)
-- **wget** or **curl** (for downloading Ghidra)
+- **Gradle 8.0 or later** (for building the extension)
+  - Note: Debian/Ubuntu package manager versions may be too old
+  - The build script can automatically download Gradle 8.10.2 locally if needed
+- **wget** or **curl** (for downloading Ghidra and Gradle)
 - **unzip** (for extracting archives)
 
 If you prefer manual installation:
-- Ubuntu/Debian: `sudo apt-get install openjdk-21-jdk gradle wget unzip`
+- Ubuntu/Debian: `sudo apt-get install openjdk-21-jdk wget unzip`
+  - Note: Skip `gradle` from apt-get as it may be too old. The build script will handle it.
 - Fedora/RHEL: `sudo dnf install java-21-openjdk-devel gradle wget unzip`
 - Arch: `sudo pacman -S jdk21-openjdk gradle wget unzip`
+
+### Gradle Version Note
+
+Ghidra 11.4.2 requires **Gradle 8.0 or later** due to Groovy 3.0 syntax requirements. Many Linux distributions package older versions of Gradle that won't work.
+
+**Automatic Solution**: The build script (`build.sh`) will automatically:
+1. Check for a suitable Gradle version
+2. If none found, offer to download and install Gradle 8.10.2 locally (no root required)
+3. Use the local installation for building the extension
+
+You don't need to manually install Gradle if you let the script handle it.
 
 ## Manual Installation
 
@@ -158,6 +172,33 @@ The **VectorSimplification** extension detects and simplifies MSVC `std::vector`
 - **Varnode Tracing**: Traces through CAST/COPY/MULTIEQUAL operations to find source variables
 
 ## Troubleshooting
+
+### Gradle Build Errors
+
+If you see an error like:
+```
+unexpected token: : @ line 253, column 45.
+sCache = results.findAll(File::exists)
+```
+
+This means your Gradle version is too old (< 8.0). Solutions:
+
+**Option 1: Let the build script handle it (recommended)**
+```bash
+cd tools/ghidra_extensions/VectorSimplification
+bash build.sh
+# Answer 'y' when prompted to install Gradle 8.10.2 locally
+```
+
+**Option 2: Install Gradle manually**
+```bash
+cd tools/ghidra_extensions/VectorSimplification
+bash install_gradle.sh
+```
+
+**Option 3: Download newer Gradle**
+- Download Gradle 8.10+ from https://gradle.org/releases/
+- Extract to `/opt/gradle` or set `GRADLE_HOME`
 
 ### Extension Not Appearing
 
