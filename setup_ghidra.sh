@@ -248,13 +248,35 @@ MIN_GRADLE_MAJOR=8
 MIN_GRADLE_MINOR=0
 
 # Function to check if Gradle version is sufficient
+# Uses timeout to prevent hanging with slow/broken Gradle installations
 check_gradle_version() {
     local gradle_cmd=$1
-    local version=$($gradle_cmd --version 2>&1 | grep "^Gradle" | sed 's/Gradle //')
+
+    # Try to get version with a 10 second timeout
+    local version_output
+    if command -v timeout &> /dev/null; then
+        version_output=$(timeout 10 $gradle_cmd --version 2>&1 | grep "^Gradle" | sed 's/Gradle //')
+    else
+        # Fallback without timeout if timeout command not available
+        version_output=$($gradle_cmd --version 2>&1 | grep "^Gradle" | sed 's/Gradle //')
+    fi
+
+    # Check if we got a version
+    if [ -z "$version_output" ]; then
+        echo "unknown"
+        return 1
+    fi
+
+    local version="$version_output"
     local major=$(echo "$version" | cut -d. -f1)
     local minor=$(echo "$version" | cut -d. -f2)
 
     echo "$version"
+
+    # Validate major/minor are numbers
+    if ! [[ "$major" =~ ^[0-9]+$ ]] || ! [[ "$minor" =~ ^[0-9]+$ ]]; then
+        return 1
+    fi
 
     if [ "$major" -gt "$MIN_GRADLE_MAJOR" ]; then
         return 0
@@ -269,15 +291,21 @@ GRADLE_OK=false
 
 # Check if gradle is available and meets minimum version
 if command -v gradle &> /dev/null; then
+    print_info "Checking Gradle version (this may take a moment)..."
     GRADLE_VERSION=$(check_gradle_version "gradle")
     if [ $? -eq 0 ]; then
         print_status "Gradle found: $GRADLE_VERSION (meets requirement >= $MIN_GRADLE_MAJOR.$MIN_GRADLE_MINOR)"
         GRADLE_OK=true
     else
-        print_warning "Gradle found but version $GRADLE_VERSION is too old (need >= $MIN_GRADLE_MAJOR.$MIN_GRADLE_MINOR)"
+        if [ "$GRADLE_VERSION" = "unknown" ]; then
+            print_warning "Gradle found but unable to determine version (may be too slow or broken)"
+        else
+            print_warning "Gradle found but version $GRADLE_VERSION is too old (need >= $MIN_GRADLE_MAJOR.$MIN_GRADLE_MINOR)"
+        fi
         print_info "The build script will attempt to use a local Gradle installation."
     fi
 elif [ -f "/opt/gradle/bin/gradle" ]; then
+    print_info "Checking Gradle at /opt/gradle/bin/gradle..."
     GRADLE_VERSION=$(check_gradle_version "/opt/gradle/bin/gradle")
     if [ $? -eq 0 ]; then
         print_status "Gradle found at: /opt/gradle/bin/gradle (version $GRADLE_VERSION)"
