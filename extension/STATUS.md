@@ -1,4 +1,4 @@
-# VectorSimplification Extension - Current Status
+# Optimized Vector Decompiler - Current Status
 
 ## Executive Summary
 

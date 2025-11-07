@@ -1,8 +1,8 @@
-# VectorSimplification Extension - Fixes Applied
+# Optimized Vector Decompiler - Fixes Applied
 
 ## Overview
 
-This document details the fixes applied to the VectorSimplification Ghidra extension after comprehensive testing revealed it was not working correctly.
+This document details the fixes applied to the Optimized Vector Decompiler Ghidra plugin after comprehensive testing revealed it was not working correctly.
 
 ## Issues Identified
 

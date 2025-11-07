@@ -1,4 +1,4 @@
-# Building MSVC Test Binary for Vector Simplification Extension
+# Building MSVC Test Binary for Optimized Vector Decompiler
 
 ## Quick Start
 
@@ -16,14 +16,14 @@ This will automatically:
 4. ✓ Compile `test/vector_test/vector_test.cpp` with MSVC
 5. ✓ Generate proper PDB debug symbols
 6. ✓ Test the binary with Ghidra
-7. ✓ Verify the VectorSimplification extension works
+7. ✓ Verify the OptimizedVectorDecompiler extension works
 8. ✓ Commit the MSVC-compiled binary
 
 **Estimated time:** 20-30 minutes (mostly downloading/installing MSVC)
 
 ## Why This Matters
 
-The VectorSimplification extension is specifically designed for **MSVC-compiled binaries** because:
+The OptimizedVectorDecompiler extension is specifically designed for **MSVC-compiled binaries** because:
 
 - **MSVC layout:** `_Myfirst` at 0x8, `_Mylast` at 0x10, `_Myend` at 0x18
 - **GCC layout:** `_M_start`, `_M_finish`, `_M_end_of_storage` (different offsets)
@@ -50,7 +50,7 @@ See `test/vector_test/README_MSVC.md` for:
 After the script completes, you should see output like:
 
 ```
-[VectorSimplification] Simplifying 1 vector patterns in GetVectorSize
+[OptimizedVectorDecompiler] Simplifying 1 vector patterns in GetVectorSize
   GetVectorSize - SIMPLIFIED
 
 Functions tested: 6
