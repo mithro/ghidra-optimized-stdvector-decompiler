@@ -2,7 +2,7 @@ name: 'Setup Ghidra'
 description: 'Download, cache, and setup Ghidra for CI'
 inputs:
   ghidra-version:
-    description: 'Ghidra version to install (e.g., 11.4.2, 11.5.0)'
+    description: 'Ghidra version to install (e.g., 11.4.1, 11.4.2)'
     required: true
   ghidra-url:
     description: 'Custom download URL (optional)'
@@ -34,11 +34,11 @@ runs:
         else
           # Map version to release date
           case "$VERSION" in
-            11.4.2)
-              DATE="20240926"
+            11.4.1)
+              DATE="20250731"
               ;;
-            11.5.0)
-              DATE="20250109"
+            11.4.2)
+              DATE="20250826"
               ;;
             *)
               echo "ERROR: Unknown Ghidra version $VERSION"
