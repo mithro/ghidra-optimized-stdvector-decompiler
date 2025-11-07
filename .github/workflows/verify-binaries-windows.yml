@@ -1,0 +1,142 @@
+name: Verify Binaries (Windows)
+
+on:
+  pull_request:
+    paths:
+      - 'examples/vector_test/*.cpp'
+  push:
+    paths:
+      - 'examples/vector_test/*.cpp'
+  workflow_dispatch:
+
+jobs:
+  verify-windows:
+    name: Rebuild and verify binaries (Native MSVC)
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup MSVC
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Setup MSVC environment
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      # TODO: PR #9 will change paths from examples/vector_test/ to demo/
+      # Update binary paths when that PR merges
+      - name: Backup committed binary before rebuild
+        shell: bash
+        run: |
+          cd examples/vector_test
+          if [ -f "vector_test_msvc.exe" ]; then
+            cp vector_test_msvc.exe vector_test_msvc.exe.committed
+            echo "Backed up committed binary to vector_test_msvc.exe.committed"
+            ls -lh vector_test_msvc.exe.committed
+          else
+            echo "ERROR: Committed binary not found: vector_test_msvc.exe"
+            exit 1
+          fi
+
+      - name: Build binary with MSVC
+        shell: cmd
+        run: |
+          cd examples\vector_test
+
+          REM Compile with optimization (matching vector_test_msvc.exe)
+          cl /EHsc /O2 /Zi /std:c++17 /Fe:vector_test_msvc.exe vector_test.cpp /link /DEBUG /PDB:vector_test_msvc.pdb
+
+          REM Verify the binary was created
+          if not exist vector_test_msvc.exe (
+            echo ERROR: Failed to build vector_test_msvc.exe
+            exit /b 1
+          )
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        shell: bash
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      # TODO: PR #9 will add multiple binaries (O2/Od optimization levels)
+      # Update this step to compare all binaries when that PR merges
+      - name: Compare rebuilt binary to committed version
+        shell: bash
+        run: |
+          export PATH="$HOME/.cargo/bin:$PATH"
+
+          cd examples/vector_test
+
+          # Verify the binary was rebuilt
+          if [ ! -f "vector_test_msvc.exe" ]; then
+            echo "ERROR: Failed to rebuild vector_test_msvc.exe"
+            exit 1
+          fi
+
+          echo "Comparing committed binary to rebuilt version..."
+          echo ""
+
+          # Use compare_binaries.py to check if they match
+          # TODO: Update path to demo/scripts/compare_binaries.py when PR #9 merges
+          uv run ../../demo/scripts/compare_binaries.py \
+            vector_test_msvc.exe.committed \
+            vector_test_msvc.exe
+
+          COMPARE_EXIT=$?
+
+          if [ $COMPARE_EXIT -eq 0 ]; then
+            echo ""
+            echo "SUCCESS: Rebuilt binary matches the committed version."
+            exit 0
+          elif [ $COMPARE_EXIT -eq 1 ]; then
+            echo ""
+            echo "============================================================"
+            echo "ERROR: Binary mismatch detected!"
+            echo "============================================================"
+            echo ""
+            echo "The rebuilt binary differs from the committed version."
+            echo ""
+            echo "This means the checked-in binary is out of sync with the source code."
+            echo ""
+            echo "To fix this on Windows:"
+            echo "  1. Setup MSVC build environment"
+            echo "  2. cd examples/vector_test"
+            echo "  3. cl /EHsc /O2 /Zi /std:c++17 /Fe:vector_test_msvc.exe vector_test.cpp /link /DEBUG"
+            echo "  4. Commit the updated binary and PDB"
+            echo "  5. Push your changes"
+            echo ""
+            echo "Note: Native Windows builds are authoritative - minor differences"
+            echo "from Wine builds are expected, but Windows-to-Windows should match."
+            echo "============================================================"
+            exit 1
+          else
+            echo ""
+            echo "ERROR: Binary comparison failed with error code $COMPARE_EXIT"
+            exit 2
+          fi
+
+      - name: Upload rebuilt binary for inspection
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rebuilt-binary-windows
+          path: |
+            examples/vector_test/vector_test_msvc.exe
+            examples/vector_test/vector_test_msvc.pdb
+          retention-days: 7
+
+      - name: Upload build logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs-windows
+          path: examples/vector_test/*.log
+          retention-days: 7
