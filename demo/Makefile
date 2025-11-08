@@ -30,7 +30,7 @@ LINKFLAGS := /LIBPATH:"$(MSVC_LIB)" \
 	/LIBPATH:"$(SDK_LIB)/ucrt/x64" \
 	/LIBPATH:"$(SDK_LIB)/um/x64" \
 	/DEBUG:FULL \
-	/stub:build_setup/dosstub.exe \
+	/stub:$(CURDIR)/build_setup/dosstub.exe \
 	/Brepro
 
 LINKFLAGS_O2 := /OPT:REF /OPT:ICF
