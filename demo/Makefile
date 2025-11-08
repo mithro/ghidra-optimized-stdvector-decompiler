@@ -5,8 +5,8 @@
 # Override these by setting environment variables or passing to make
 GHIDRA_INSTALL_DIR ?= $(HOME)/tools/ghidra
 MSVC_DIR ?= $(HOME)/.msvc
-CLANG_CL ?= clang-cl-19
-LLD_LINK ?= lld-link
+CLANG_CL ?= clang-cl-20
+LLD_LINK ?= lld-link-20
 
 # MSVC paths (auto-detected from MSVC_DIR)
 MSVC_VERSION := 14.44.35207
