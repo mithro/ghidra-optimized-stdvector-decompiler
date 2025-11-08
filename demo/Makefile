@@ -11,9 +11,9 @@ LLD_LINK ?= lld-link
 # MSVC paths (auto-detected from MSVC_DIR)
 MSVC_VERSION := 14.44.35207
 SDK_VERSION := 10.0.26100.0
-MSVC_INCLUDE := $(MSVC_DIR)/unpack/VC/Tools/MSVC/$(MSVC_VERSION)/include
+MSVC_INCLUDE := $(MSVC_DIR)/VC/Tools/MSVC/$(MSVC_VERSION)/include
 SDK_INCLUDE := $(MSVC_DIR)/Windows Kits/10/Include/$(SDK_VERSION)
-MSVC_LIB := $(MSVC_DIR)/unpack/VC/Tools/MSVC/$(MSVC_VERSION)/lib/x64
+MSVC_LIB := $(MSVC_DIR)/VC/Tools/MSVC/$(MSVC_VERSION)/lib/x64
 SDK_LIB := $(MSVC_DIR)/Windows Kits/10/Lib/$(SDK_VERSION)
 
 # Compiler flags
