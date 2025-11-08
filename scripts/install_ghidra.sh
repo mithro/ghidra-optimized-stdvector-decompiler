@@ -25,7 +25,7 @@ get_ghidra_download_url() {
     # For well-known versions, use exact filenames
     case "$version" in
         11.4.2)
-            filename="ghidra_11.4.2_PUBLIC_20250122.zip"
+            filename="ghidra_11.4.2_PUBLIC_20250826.zip"
             ;;
         11.4.1)
             filename="ghidra_11.4.1_PUBLIC_20241105.zip"
