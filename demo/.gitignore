@@ -1,0 +1,19 @@
+# Temporary build artifacts
+*.obj
+*.ilk
+*.exp
+*.lib
+*.tmp
+
+# Build logs
+*.log
+build_msvc.log
+
+# Downloaded tools (can be regenerated)
+build_setup/tools/
+
+# Keep these committed:
+# *.exe - Demo binaries
+# *.pdb - Debug symbols
+# *.gpr - Ghidra project files
+# *.rep/ - Ghidra project directories
