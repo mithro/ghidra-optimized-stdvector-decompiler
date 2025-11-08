@@ -56,7 +56,7 @@ fi
 # Step 3: Download msvc-wine tool
 echo ""
 echo "[3/4] Setting up msvc-wine toolchain downloader..."
-TOOLS_DIR="$SCRIPT_DIR/build_environments/tools"
+TOOLS_DIR="$SCRIPT_DIR/build_setup/tools"
 if [ ! -d "$TOOLS_DIR/msvc-wine" ]; then
     echo "Cloning msvc-wine repository..."
     mkdir -p "$TOOLS_DIR"

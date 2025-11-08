@@ -206,7 +206,7 @@ This layout differs from GCC/Clang implementations, which is why MSVC-compatible
 
 ## Build Methods
 
-Multiple approaches for setting up the build environment are available in `build_environments/`:
+Multiple approaches for setting up the build environment are available in `build_setup/`:
 
 | Method | Setup Script | CI-Friendly | Speed | Pros | Cons |
 |--------|-------------|-------------|-------|------|------|
@@ -214,7 +214,7 @@ Multiple approaches for setting up the build environment are available in `build
 | **msvc-wine** | `setup_msvc_wine.sh` | ✅ Yes | Slow | Real MSVC | Wine overhead |
 | **winetricks** | `setup_msvc_winetricks.sh` | ❌ No | Medium | Official | GUI required |
 
-See `build_environments/README.md` for detailed comparison and instructions.
+See `build_setup/README.md` for detailed comparison and instructions.
 
 The default `./setup_build_env.sh` uses the clang-cl + xwin method (fast and CI-friendly).
 
@@ -259,4 +259,4 @@ make check-env
 - `../test.py` - Top-level test that validates extension functionality
 - `../CLAUDE.md` - Project overview and development guide
 - `../docs/INSTALLATION.md` - Extension installation instructions
-- `build_environments/README.md` - Detailed build method comparison
+- `build_setup/README.md` - Detailed build method comparison

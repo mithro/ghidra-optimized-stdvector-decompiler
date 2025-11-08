@@ -32,7 +32,7 @@ Uses clang-cl (LLVM's MSVC-compatible frontend) with Microsoft headers/libraries
 cd demo
 ./setup_build_env.sh
 # OR
-./build_environments/setup_clangcl.sh
+./build_setup/setup_clangcl.sh
 ```
 
 ### What It Does
@@ -78,7 +78,7 @@ Uses the real Microsoft Visual C++ compiler running under Wine emulation.
 
 ### Setup
 ```bash
-./build_environments/setup_msvc_wine.sh
+./build_setup/setup_msvc_wine.sh
 ```
 
 ### What It Does
@@ -119,7 +119,7 @@ Uses the official Microsoft Visual Studio Build Tools installer through winetric
 
 ### Setup
 ```bash
-./build_environments/setup_msvc_winetricks.sh
+./build_setup/setup_msvc_winetricks.sh
 ```
 
 ### What It Does
@@ -194,7 +194,7 @@ sudo ln -s /usr/lib/llvm-19/bin/clang /usr/bin/clang-cl-19
 **"MSVC headers not found"**
 ```bash
 # Re-run header download
-cd build_environments/tools/msvc-wine
+cd build_setup/tools/msvc-wine
 python3 ./vsdownload.py --accept-license --dest ~/.msvc
 ```
 
@@ -290,7 +290,7 @@ The default setup uses MSVC 14.44 and SDK 10.0.26100. To use different versions:
 
 ### With msvc-wine
 ```bash
-cd build_environments/tools/msvc-wine
+cd build_setup/tools/msvc-wine
 python3 ./vsdownload.py --help
 # Edit script to specify different versions
 ```

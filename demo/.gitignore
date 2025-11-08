@@ -10,7 +10,7 @@
 build_msvc.log
 
 # Downloaded tools (can be regenerated)
-build_environments/tools/
+build_setup/tools/
 
 # Keep these committed:
 # *.exe - Demo binaries

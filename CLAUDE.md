@@ -31,7 +31,7 @@ demo/                         # Demo binaries and analysis scripts
   *.cpp                       # C++ demo programs demonstrating patterns
   scripts/*.py                # Python Ghidra headless analysis scripts
   *.exe                       # Pre-compiled MSVC demo binaries
-  build_environments/         # Build environment setup scripts
+  build_setup/                # Build environment setup scripts
 
 docs/
   INSTALLATION.md            # Detailed installation guide
