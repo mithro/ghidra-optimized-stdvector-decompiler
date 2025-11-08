@@ -126,16 +126,29 @@ fi
 # Verify Ghidra installation
 echo ""
 echo "Checking for Ghidra installation..."
+
+# Check if GHIDRA_INSTALL_DIR is set, otherwise try default location
+DEFAULT_GHIDRA="$HOME/tools/ghidra"
 if [ -z "$GHIDRA_INSTALL_DIR" ]; then
-    echo "⚠ Warning: GHIDRA_INSTALL_DIR not set"
-    echo "  You'll need to set this before running 'make ghidra-projects' or 'make test'"
-    echo "  Example: export GHIDRA_INSTALL_DIR=/path/to/ghidra"
+    # Not set - check default location
+    if [ -d "$DEFAULT_GHIDRA" ] && [ -f "$DEFAULT_GHIDRA/ghidraRun" ]; then
+        echo "✓ Ghidra found at default location: $DEFAULT_GHIDRA"
+        echo "  The Makefile will use this automatically"
+        echo "  Or set: export GHIDRA_INSTALL_DIR=$DEFAULT_GHIDRA"
+    else
+        echo "⚠ Warning: GHIDRA_INSTALL_DIR not set and Ghidra not found at default location"
+        echo "  Default location checked: $DEFAULT_GHIDRA"
+        echo "  To install Ghidra, run: ../setup.sh"
+        echo "  Or set manually: export GHIDRA_INSTALL_DIR=/path/to/ghidra"
+    fi
 else
-    if [ -d "$GHIDRA_INSTALL_DIR" ]; then
+    # GHIDRA_INSTALL_DIR is set - verify it exists
+    if [ -d "$GHIDRA_INSTALL_DIR" ] && [ -f "$GHIDRA_INSTALL_DIR/ghidraRun" ]; then
         echo "✓ Ghidra found at: $GHIDRA_INSTALL_DIR"
     else
-        echo "✗ ERROR: GHIDRA_INSTALL_DIR points to non-existent directory"
+        echo "✗ ERROR: GHIDRA_INSTALL_DIR points to invalid directory"
         echo "  $GHIDRA_INSTALL_DIR"
+        echo "  Expected to find: ghidraRun"
     fi
 fi
 
