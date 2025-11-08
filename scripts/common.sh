@@ -109,7 +109,8 @@ check_disk_space() {
     local required_mb="$2"
 
     # Get available space in MB
-    local available_mb=$(df -BM "$path" | awk 'NR==2 {print $4}' | sed 's/M//')
+    local available_mb
+    available_mb=$(df -BM "$path" | awk 'NR==2 {print $4}' | sed 's/M//')
 
     if [ "$available_mb" -lt "$required_mb" ]; then
         fail "Insufficient disk space. Required: ${required_mb}MB, Available: ${available_mb}MB"
