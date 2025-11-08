@@ -7,9 +7,14 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/common.sh"
 
-# Check if Java is installed and meets minimum version
+# Check if Java JDK is installed and meets minimum version
 check_java_version() {
     if ! command -v java &> /dev/null; then
+        return 1
+    fi
+
+    # Check for javac (Java compiler) - required for building
+    if ! command -v javac &> /dev/null; then
         return 1
     fi
 
