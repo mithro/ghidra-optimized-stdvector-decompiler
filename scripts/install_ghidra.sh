@@ -12,24 +12,6 @@ INSTALL_DIR="${INSTALL_DIR:-$HOME/tools}"
 GHIDRA_VERSION="${GHIDRA_VERSION:-11.4.2}"
 GHIDRA_INSTALL_DIR="${GHIDRA_INSTALL_DIR:-$INSTALL_DIR/ghidra}"
 
-# Detect architecture
-detect_architecture() {
-    local arch=$(uname -m)
-    case "$arch" in
-        x86_64)
-            echo "x64"
-            ;;
-        aarch64|arm64)
-            print_warning "ARM architecture detected. Ghidra releases use different naming."
-            echo "arm64"
-            ;;
-        *)
-            print_warning "Unknown architecture: $arch. Assuming x64."
-            echo "x64"
-            ;;
-    esac
-}
-
 # Build Ghidra download URL
 get_ghidra_download_url() {
     local version="$1"
@@ -37,7 +19,8 @@ get_ghidra_download_url() {
     local release_tag="Ghidra_${version}_build"
 
     # Standard filename pattern for most releases
-    local filename="ghidra_${version}_PUBLIC_$(date +%Y%m%d).zip"
+    local filename
+    filename="ghidra_${version}_PUBLIC_$(date +%Y%m%d).zip"
 
     # For well-known versions, use exact filenames
     case "$version" in
@@ -76,11 +59,13 @@ install_ghidra() {
     check_disk_space "$(dirname "$install_dir")" 500
 
     # Create temporary directory for download
-    local tmp_dir=$(mktemp -d)
-    trap "rm -rf '$tmp_dir'" EXIT
+    local tmp_dir
+    tmp_dir=$(mktemp -d)
+    trap 'rm -rf "$tmp_dir"' EXIT
 
     # Download Ghidra
-    local download_url=$(get_ghidra_download_url "$version")
+    local download_url
+    download_url=$(get_ghidra_download_url "$version")
     local zip_file="$tmp_dir/ghidra.zip"
 
     print_info "Downloading Ghidra ${version}..."
@@ -96,14 +81,14 @@ Then extract to: $install_dir"
     extract_archive "$zip_file" "$extract_dir"
 
     # Find the extracted Ghidra directory (it's usually ghidra_<version>_PUBLIC)
-    local ghidra_dir=$(find "$extract_dir" -maxdepth 1 -type d -name "ghidra_*" | head -1)
+    local ghidra_dir
+    ghidra_dir=$(find "$extract_dir" -maxdepth 1 -type d -name "ghidra_*" | head -1)
 
     if [ -z "$ghidra_dir" ]; then
         fail "Could not find extracted Ghidra directory"
     fi
 
-    # Create parent directory and move Ghidra to final location
-    mkdir -p "$(dirname "$install_dir")"
+    # Move Ghidra to final location
     mv "$ghidra_dir" "$install_dir"
 
     print_status "Ghidra installed to: $install_dir"
