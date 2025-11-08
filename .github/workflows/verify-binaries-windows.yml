@@ -46,16 +46,16 @@ jobs:
           cd demo
 
           REM Build optimized version with proper linker flags
-          REM Match Makefile flags: /MD /O2 /Zi + /DEBUG:FULL /OPT:REF /OPT:ICF
-          cl /EHsc /MD /O2 /Zi /std:c++17 /Fe:vector_extra_O2.exe vector_extra.cpp /link /DEBUG:FULL /OPT:REF /OPT:ICF
+          REM Match Makefile flags: /MD /O2 /Zi + /DEBUG:FULL /OPT:REF /OPT:ICF /STUB: /Brepro
+          cl /EHsc /MD /O2 /Zi /std:c++17 /Fe:vector_extra_O2.exe vector_extra.cpp /link /DEBUG:FULL /OPT:REF /OPT:ICF /STUB:build_setup\dosstub.exe /Brepro
           if not exist vector_extra_O2.exe (
             echo ERROR: Failed to build vector_extra_O2.exe
             exit /b 1
           )
 
           REM Build debug version
-          REM Match Makefile flags: /MD /Od /Zi + /DEBUG:FULL /OPT:NOREF /OPT:NOICF
-          cl /EHsc /MD /Od /Zi /std:c++17 /Fe:vector_extra_Od.exe vector_extra.cpp /link /DEBUG:FULL /OPT:NOREF /OPT:NOICF
+          REM Match Makefile flags: /MD /Od /Zi + /DEBUG:FULL /OPT:NOREF /OPT:NOICF /STUB: /Brepro
+          cl /EHsc /MD /Od /Zi /std:c++17 /Fe:vector_extra_Od.exe vector_extra.cpp /link /DEBUG:FULL /OPT:NOREF /OPT:NOICF /STUB:build_setup\dosstub.exe /Brepro
           if not exist vector_extra_Od.exe (
             echo ERROR: Failed to build vector_extra_Od.exe
             exit /b 1
