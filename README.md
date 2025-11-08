@@ -49,10 +49,16 @@ This plugin automatically detects and transforms these optimized patterns back i
 
 ### Prerequisites
 
-- **Ubuntu/Debian Linux** (or compatible)
-- **sudo access** (for Java installation only)
-- **~500MB free disk space**
-- **Internet connection**
+**Platform Requirements:**
+- Ubuntu/Debian Linux (or compatible)
+- sudo access (for Java installation only)
+- ~500MB free disk space
+- Internet connection
+
+**Software (automatically installed if needed):**
+- Java 21 or later
+- Ghidra 11.4.2
+- Gradle 8.0+ (installed locally by build script if needed)
 
 ### Installation
 

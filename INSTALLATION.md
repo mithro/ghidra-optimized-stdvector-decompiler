@@ -1,323 +1,396 @@
-# Ghidra Setup Guide
+# Installation Guide
 
-This guide explains how to set up Ghidra with all modules and the custom OptimizedVectorDecompiler extension.
+This guide covers both automatic and manual installation methods for the Optimized std::vector Decompiler plugin.
 
-## Quick Start
+## Automatic Installation (Recommended)
 
-Run the automated setup script:
+The `setup.sh` script provides a fully automated installation process that handles all dependencies.
 
-```bash
-./setup_ghidra.sh
-```
+### Prerequisites
 
-This will:
-1. Check and optionally install basic dependencies (wget/curl, unzip)
-2. Check if Ghidra is installed (optionally download and install if missing)
-3. Check and optionally install Java 21
-4. Check and optionally install Gradle
-5. Create necessary user directories
-6. Build the OptimizedVectorDecompiler extension
-7. Install the extension to Ghidra (both GUI and headless modes)
-8. **Automatically enable the extension** (no manual GUI configuration needed!)
-9. Verify the installation
+**Platform Requirements:**
+- Ubuntu/Debian Linux (or compatible)
+- sudo access (for Java installation only)
+- ~500MB free disk space
+- Internet connection
 
-The script will prompt you to install any missing dependencies automatically.
+**Software (automatically installed if needed):**
+- Java 21 or later
+- Ghidra 11.4.2
+- Gradle 8.0+ (installed locally by build script if needed)
 
-**Note:** The extension is automatically enabled for both:
-- **GUI mode**: Configured via user preferences file
-- **Headless mode**: JAR installed to Decompiler lib directory
+### Quick Start
 
-## Requirements
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/YOUR_USERNAME/ghidra-optimized-stdvector-decompiler.git
+   cd ghidra-optimized-stdvector-decompiler
+   ```
 
-The setup script can automatically install these dependencies on supported systems (Ubuntu/Debian, Fedora/RHEL, Arch):
+2. **Run the setup script:**
+   ```bash
+   ./setup.sh
+   ```
 
-- **Java 17 or later** (script installs OpenJDK 21)
-- **Gradle 8.0 or later** (for building the extension)
-  - Note: Debian/Ubuntu package manager versions may be too old
-  - The build script can automatically download Gradle 8.10.2 locally if needed
-- **wget** or **curl** (for downloading Ghidra and Gradle)
-- **unzip** (for extracting archives)
+3. **Follow the prompts:**
+   - The script will detect missing dependencies
+   - For Java: It will offer to install OpenJDK 21 via apt (requires sudo)
+   - For Ghidra: It will offer to download and install Ghidra 11.4.2 to `~/ghidra`
+   - The script will then build and install the extension automatically
 
-If you prefer manual installation:
-- Ubuntu/Debian: `sudo apt-get install openjdk-21-jdk wget unzip`
-  - Note: Skip `gradle` from apt-get as it may be too old. The build script will handle it.
-- Fedora/RHEL: `sudo dnf install java-21-openjdk-devel gradle wget unzip`
-- Arch: `sudo pacman -S jdk21-openjdk gradle wget unzip`
+4. **Start Ghidra:**
+   ```bash
+   $GHIDRA_INSTALL_DIR/ghidraRun
+   ```
 
-### Gradle Version Note
+The extension is now active and ready to use!
 
-Ghidra 11.4.2 requires **Gradle 8.0 or later** due to Groovy 3.0 syntax requirements. Many Linux distributions package older versions of Gradle that won't work.
+### What the Setup Script Does
 
-**Automatic Solution**: The build script (`build.sh`) will automatically:
-1. Check for a suitable Gradle version
-2. If none found, offer to download and install Gradle 8.10.2 locally (no root required)
-3. Use the local installation for building the extension
+The `setup.sh` script automates the entire installation process:
 
-You don't need to manually install Gradle if you let the script handle it.
+1. **Environment Detection:**
+   - Checks for existing Ghidra installation
+   - Verifies Java version (requires Java 21+)
+   - Detects available Gradle version
+
+2. **Dependency Installation:**
+   - **Java**: If not present or version < 21, offers to install OpenJDK 21 via apt
+   - **Ghidra**: If not found, offers to download and install Ghidra 11.4.2 to `~/ghidra`
+   - **Gradle**: Handled by `build.sh`, which installs Gradle 8.10.2 locally if needed
+
+3. **Build Process:**
+   - Compiles the Java extension using Gradle
+   - Runs Ghidra's `buildExtension.gradle` build system
+   - Generates the extension ZIP in `extension/dist/`
+
+4. **Installation:**
+   - Extracts extension to `$GHIDRA_INSTALL_DIR/Extensions/Ghidra/`
+   - Copies JAR to `$GHIDRA_INSTALL_DIR/Ghidra/Features/Decompiler/lib/` for headless mode
+   - Auto-enables the extension in Ghidra preferences
+
+5. **Verification:**
+   - Confirms all files are in place
+   - Displays installation success message
 
 ## Manual Installation
 
-If you prefer manual installation:
+If you prefer to install components manually or the automatic installation fails, follow these steps.
 
-### 1. Install Ghidra
+### Step 1: Install Java
 
-Download Ghidra 11.4.2 from:
-https://github.com/NationalSecurityAgency/ghidra/releases
+**Check existing Java version:**
+```bash
+java -version
+```
 
-Extract to `$HOME/tools/ghidra/` (or set `GHIDRA_INSTALL_DIR`)
+**If Java 21+ is not installed:**
 
-### 2. Build OptimizedVectorDecompiler Extension
+On Ubuntu/Debian:
+```bash
+sudo apt update
+sudo apt install -y openjdk-21-jdk
+```
+
+On other platforms, download from [Adoptium](https://adoptium.net/) or use your package manager.
+
+### Step 2: Install Ghidra
+
+**Option A: Download Manually**
+
+1. Download Ghidra 11.4.2 from [ghidra-sre.org](https://ghidra-sre.org/)
+2. Extract to your preferred location:
+   ```bash
+   unzip ghidra_11.4.2_PUBLIC_20241023.zip -d ~/
+   export GHIDRA_INSTALL_DIR=~/ghidra_11.4.2_PUBLIC
+   ```
+
+**Option B: Use setup script for Ghidra only**
+
+```bash
+# Set environment to skip Java check
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
+./setup.sh  # Answer 'n' to Java installation, 'y' to Ghidra
+```
+
+### Step 3: Build the Extension
 
 ```bash
 cd extension
-export GHIDRA_INSTALL_DIR=$HOME/tools/ghidra
-bash build.sh
+export GHIDRA_INSTALL_DIR=/path/to/ghidra  # Adjust path
+./build.sh
 ```
 
-### 3. Install Extension
+The build script will:
+- Check for Gradle 8.0+
+- Offer to install Gradle 8.10.2 locally if needed
+- Build the extension using Ghidra's build system
+- Create ZIP file in `dist/` directory
 
-**Option A: System-wide installation**
-```bash
-unzip dist/ghidra_11.4.2_PUBLIC_*_OptimizedVectorDecompiler.zip -d $GHIDRA_INSTALL_DIR/Extensions/Ghidra/
-```
+### Step 4: Install the Extension
 
-**Option B: User installation**
-```bash
-unzip dist/ghidra_11.4.2_PUBLIC_*_OptimizedVectorDecompiler.zip -d ~/.ghidra/.ghidra_11.4.2_PUBLIC/Extensions/
-```
-
-### 4. Install JAR for Headless Mode
-
-For headless analysis support:
-```bash
-cp build/libs/OptimizedVectorDecompiler.jar $GHIDRA_INSTALL_DIR/Ghidra/Features/Decompiler/lib/
-```
-
-### 5. Enable Extension in Ghidra
-
-**Automatic (via setup script):**
-The setup script automatically enables the extension - no manual steps needed!
-
-**Manual (if not using setup script):**
-1. Create preferences file:
-```bash
-mkdir -p ~/.ghidra/.ghidra_11.4.2_PUBLIC/preferences
-cat > ~/.ghidra/.ghidra_11.4.2_PUBLIC/preferences/ExtensionProvider <<'EOF'
-<?xml version="1.0" encoding="UTF-8"?>
-<FILE_INFO>
-    <BASIC_INFO>
-        <STATE NAME="Extension States" TYPE="string" VALUE="OptimizedVectorDecompiler:true;" />
-    </BASIC_INFO>
-</FILE_INFO>
-EOF
-```
-
-**OR via GUI:**
-1. Launch Ghidra: `$GHIDRA_INSTALL_DIR/ghidraRun`
-2. Go to: **File → Configure**
-3. Check: **OptimizedVectorDecompiler**
-4. Restart Ghidra
-
-## Configuration
-
-### Environment Variables
-
-- `GHIDRA_INSTALL_DIR`: Ghidra installation directory (default: `$HOME/tools/ghidra`)
-- `GHIDRA_VERSION`: Ghidra version to install (default: `11.4.2`)
-- `GHIDRA_RELEASE`: Release build date (default: `20250826`)
-
-Example:
-```bash
-export GHIDRA_INSTALL_DIR=/opt/ghidra
-./setup_ghidra.sh
-```
-
-### Extension Configuration
-
-The OptimizedVectorDecompiler extension is configured via:
-- Module.manifest: Extension metadata
-- extension.properties: Extension properties
-- build.gradle: Build configuration
-
-## Usage
-
-### GUI Mode
+**Option A: Using Ghidra GUI**
 
 1. Open Ghidra
-2. Create/open a project
-3. Import a binary (e.g., `vector_test_msvc.exe`)
-4. Analyze with default analyzers
-5. Open the decompiler - vector patterns will be automatically simplified
+2. Go to File → Install Extensions
+3. Click the green "+" icon
+4. Navigate to `extension/dist/` and select the ZIP file
+5. Restart Ghidra
+6. Verify in File → Configure → Extensions that "OptimizedVectorDecompiler" is checked
 
-### Headless Mode
-
-```bash
-$GHIDRA_INSTALL_DIR/support/analyzeHeadless \
-    /tmp/ghidra_project \
-    TestProject \
-    -import vector_test_msvc.exe \
-    -postScript test_transformation.py
-```
-
-### Testing
-
-Test the extension with the provided test binary:
+**Option B: Manual Installation**
 
 ```bash
-cd examples/vector_test
-python test_transformation.py
+# Extract to Ghidra Extensions directory
+cd extension/dist
+unzip OptimizedVectorDecompiler-*.zip -d $GHIDRA_INSTALL_DIR/Extensions/Ghidra/
+
+# For headless mode support, also copy JAR:
+cp $GHIDRA_INSTALL_DIR/Extensions/Ghidra/OptimizedVectorDecompiler/lib/OptimizedVectorDecompiler.jar \
+   $GHIDRA_INSTALL_DIR/Ghidra/Features/Decompiler/lib/
 ```
 
-Expected output:
-- 2 EMPTY patterns: `vec->empty()`
-- 1 SIZE pattern: `vec->size()`
-- 1 CAPACITY pattern: `vec->capacity()`
-- 1 DATA pattern: `vec->data()`
+### Step 5: Enable the Extension
 
-## Extension Features
+**Option A: Via GUI**
+1. Open Ghidra
+2. File → Configure → Extensions
+3. Check "OptimizedVectorDecompiler"
+4. Restart Ghidra if prompted
 
-The **OptimizedVectorDecompiler** extension detects and simplifies MSVC `std::vector` patterns:
+**Option B: Manually edit preferences**
 
-### Supported Patterns
+```bash
+# Find your Ghidra user directory
+GHIDRA_USER_DIR=~/.ghidra/.ghidra_11.4.2_PUBLIC
 
-| Pattern | Decompiled Code | Simplified |
-|---------|----------------|------------|
-| **SIZE** | `(_Mylast - _Myfirst) >> N` | `vec->size()` |
-| **EMPTY** | `_Myfirst == _Mylast` | `vec->empty()` |
-| **CAPACITY** | `(_Myend - _Myfirst) >> N` | `vec->capacity()` |
-| **DATA** | `*_Myfirst` (when dereferenced) | `vec->data()` |
+# Enable extension in preferences
+echo "OptimizedVectorDecompiler=true" >> $GHIDRA_USER_DIR/preferences/ExtensionProvider
+```
 
-### Implementation Details
+## Verification
 
-- **Pattern Matching**: Analyzes Pcode operations to identify vector member access
-- **Context-Aware**: DATA pattern only matches when pointer is actually dereferenced
-- **AST Rewriting**: Uses ClangTokenGroup to transform decompiled output
-- **Varnode Tracing**: Traces through CAST/COPY/MULTIEQUAL operations to find source variables
+### Test the Installation
+
+1. **GUI Mode:**
+   ```bash
+   $GHIDRA_INSTALL_DIR/ghidraRun
+   ```
+   - Open a Windows executable
+   - Analyze the binary
+   - Open Decompiler window
+   - Look for simplified vector operations
+
+2. **Headless Mode:**
+   ```bash
+   cd examples/vector_test
+   python test_transformation.py
+   ```
+
+   Expected output:
+   ```
+   ✓ Found 2 EMPTY patterns: vec->empty()
+   ✓ Found 1 SIZE pattern: vec->size()
+   ✓ Found 1 CAPACITY pattern: vec->capacity()
+   ✓ Found 1 DATA pattern: vec->data()
+   ```
+
+### Check Installation Files
+
+```bash
+# Extension directory
+ls $GHIDRA_INSTALL_DIR/Extensions/Ghidra/OptimizedVectorDecompiler
+
+# Headless mode JAR
+ls $GHIDRA_INSTALL_DIR/Ghidra/Features/Decompiler/lib/OptimizedVectorDecompiler.jar
+
+# Check if enabled
+grep OptimizedVectorDecompiler ~/.ghidra/.ghidra_11.4.2_PUBLIC/preferences/ExtensionProvider
+```
 
 ## Troubleshooting
 
-### Gradle Build Errors
+### Extension Not Loading
 
-If you see an error like:
-```
-unexpected token: : @ line 253, column 45.
-sCache = results.findAll(File::exists)
-```
+**Symptom:** Extension doesn't appear in File → Configure → Extensions
 
-This means your Gradle version is too old (< 8.0). Solutions:
+**Solutions:**
 
-**Option 1: Let the build script handle it (recommended)**
-```bash
-cd extension
-bash build.sh
-# Answer 'y' when prompted to install Gradle 8.10.2 locally
-```
-
-**Option 2: Install Gradle manually**
-```bash
-cd extension
-bash install_gradle.sh
-```
-
-**Option 3: Download newer Gradle**
-- Download Gradle 8.10+ from https://gradle.org/releases/
-- Extract to `/opt/gradle` or set `GRADLE_HOME`
-
-### Extension Not Appearing
-
-1. Check installation:
+1. Check installation path:
    ```bash
    ls $GHIDRA_INSTALL_DIR/Extensions/Ghidra/OptimizedVectorDecompiler
    ```
 
-2. Check Module.manifest:
+2. Verify file permissions:
    ```bash
-   cat $GHIDRA_INSTALL_DIR/Extensions/Ghidra/OptimizedVectorDecompiler/Module.manifest
+   chmod -R 755 $GHIDRA_INSTALL_DIR/Extensions/Ghidra/OptimizedVectorDecompiler
    ```
 
 3. Check Ghidra logs:
    ```bash
    tail -f ~/.config/ghidra/ghidra_11.4.2_PUBLIC/application.log
    ```
+   Look for errors related to "OptimizedVectorDecompiler"
+
+4. Reinstall using GUI method (File → Install Extensions)
+
+### Gradle Version Errors
+
+**Symptom:** Build fails with `unexpected token: :` or similar syntax errors
+
+**Cause:** Gradle version < 8.0
+
+**Solution:** The `build.sh` script will automatically detect this and offer to install Gradle 8.10.2 locally:
+```bash
+cd extension
+./build.sh
+# Answer 'y' when prompted to install Gradle
+```
+
+### Java Version Issues
+
+**Symptom:** Build fails with "UnsupportedClassVersionError" or "class file version" errors
+
+**Cause:** Java version < 21
+
+**Solution:**
+```bash
+# Check Java version
+java -version
+
+# Install Java 21 if needed
+sudo apt install -y openjdk-21-jdk
+
+# Set JAVA_HOME if you have multiple Java versions
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
+```
+
+### Patterns Not Detecting
+
+**Symptom:** Vector patterns still show as raw pointer arithmetic
+
+**Possible causes and solutions:**
+
+1. **Binary not compiled with MSVC:**
+   ```bash
+   file binary.exe
+   # Should show "PE32+ executable (console) x86-64"
+   ```
+   This plugin only supports MSVC-compiled binaries.
+
+2. **Extension not enabled:**
+   - File → Configure → Extensions
+   - Ensure "OptimizedVectorDecompiler" is checked
+   - Restart Ghidra
+
+3. **No type information:**
+   - The plugin works best with PDB debug symbols
+   - Try analyzing with PDB file in same directory as executable
+   - Pattern detection may be limited without type info
+
+4. **Test with known-good binary:**
+   ```bash
+   cd examples/vector_test
+   python test_transformation.py
+   ```
+   If test binaries work, the issue is with your target binary.
 
 ### Headless Mode Not Working
 
-1. Verify JAR installation:
+**Symptom:** Patterns not simplified in headless analysis scripts
+
+**Cause:** JAR not copied to Decompiler lib directory
+
+**Solution:**
+```bash
+cp $GHIDRA_INSTALL_DIR/Extensions/Ghidra/OptimizedVectorDecompiler/lib/OptimizedVectorDecompiler.jar \
+   $GHIDRA_INSTALL_DIR/Ghidra/Features/Decompiler/lib/
+```
+
+### Permission Denied Errors
+
+**Symptom:** Cannot write to Ghidra installation directory
+
+**Solutions:**
+
+1. **Run setup script normally** (only requires sudo for Java installation)
+2. **If Ghidra is in system directory:**
    ```bash
-   ls $GHIDRA_INSTALL_DIR/Ghidra/Features/Decompiler/lib/OptimizedVectorDecompiler.jar
+   sudo chown -R $USER:$USER $GHIDRA_INSTALL_DIR
+   ```
+3. **Or install Ghidra to user directory:**
+   ```bash
+   export GHIDRA_INSTALL_DIR=~/ghidra_11.4.2_PUBLIC
    ```
 
-2. Rebuild and reinstall:
+## Uninstallation
+
+To remove the extension:
+
+1. **Via Ghidra GUI:**
+   - File → Configure → Extensions
+   - Uncheck "OptimizedVectorDecompiler"
+   - Click the red "-" button to remove
+
+2. **Manual removal:**
    ```bash
-   cd extension
-   bash build.sh
-   cp build/libs/OptimizedVectorDecompiler.jar $GHIDRA_INSTALL_DIR/Ghidra/Features/Decompiler/lib/
+   rm -rf $GHIDRA_INSTALL_DIR/Extensions/Ghidra/OptimizedVectorDecompiler
+   rm -f $GHIDRA_INSTALL_DIR/Ghidra/Features/Decompiler/lib/OptimizedVectorDecompiler.jar
    ```
 
-### Build Errors
-
-1. Check Java version:
+3. **Remove from preferences:**
    ```bash
-   java -version  # Should be 17 or later
+   # Edit this file and remove the OptimizedVectorDecompiler line:
+   nano ~/.ghidra/.ghidra_11.4.2_PUBLIC/preferences/ExtensionProvider
    ```
 
-2. Check Gradle:
-   ```bash
-   cd extension
-   ./gradlew --version
-   ```
+## Advanced Configuration
 
-3. Clean and rebuild:
-   ```bash
-   ./gradlew clean buildExtension
-   ```
+### Using Different Ghidra Versions
 
-### Pattern Not Detecting
+The plugin is developed for Ghidra 11.4.2 but may work with other 11.x versions:
 
-1. Enable debug output:
-   - The extension prints debug info to stderr
-   - Check terminal output when running headless
+1. Set `GHIDRA_INSTALL_DIR` to your Ghidra version
+2. Update `extension.properties` if API changes are needed
+3. Rebuild and test thoroughly
 
-2. Verify binary uses MSVC std::vector:
-   - Pattern detection only works with MSVC implementation
-   - Uses offsets: _Myfirst (0x0), _Mylast (0x8), _Myend (0x10)
+### Building for Distribution
 
-
-## Development
-
-### Building from Source
+To create a redistributable extension:
 
 ```bash
 cd extension
-gradle -PGHIDRA_INSTALL_DIR=/path/to/ghidra buildExtension
+export GHIDRA_INSTALL_DIR=/path/to/ghidra
+./build.sh
 ```
 
-### Running Tests
+The ZIP file in `extension/dist/` can be shared and installed via Ghidra's GUI.
 
-```bash
-cd examples/vector_test
-# Run analysis
-$GHIDRA_INSTALL_DIR/support/analyzeHeadless /tmp/test TestProject \
-    -import vector_test_msvc.exe \
-    -postScript test_transformation.py
-```
+### Development Setup
 
-### Debugging
+For plugin development:
 
-Add debug output to VectorPatternMatcher.java:
-```java
-System.err.println("Debug: " + varnode);
-```
+1. Install Ghidra and extension as above
+2. Import `extension/` as Gradle project in your IDE
+3. Set GHIDRA_INSTALL_DIR environment variable
+4. Use `./build.sh` for incremental builds
+5. Test changes: copy JAR and restart Ghidra
 
-Rebuild and check stderr output.
+See [CLAUDE.md](CLAUDE.md) for development guidance.
 
-## References
+## Getting Help
 
-- [Ghidra Documentation](https://ghidra-sre.org/)
-- [Extension Development Guide](https://ghidra.re/ghidra_docs/api/)
-- [OptimizedVectorDecompiler Source](extension/)
-- [Test Binaries](examples/vector_test/)
+If you encounter issues not covered here:
 
-## License
-
-See [LICENSE](LICENSE) for details.
+1. Check the [GitHub Issues](https://github.com/YOUR_USERNAME/ghidra-optimized-stdvector-decompiler/issues)
+2. Review [CLAUDE.md](CLAUDE.md) for troubleshooting tips
+3. Run test suite to isolate the problem:
+   ```bash
+   cd examples/vector_test
+   python test_transformation.py
+   ```
+4. Check Ghidra logs for detailed error messages
+5. Open a new issue with:
+   - Your platform and versions (Java, Ghidra, OS)
+   - Full error message and logs
+   - Steps to reproduce
