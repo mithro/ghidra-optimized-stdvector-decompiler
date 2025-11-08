@@ -35,8 +35,11 @@ install_java_apt() {
     print_info "Installing OpenJDK 21 via apt..."
 
     # Check sudo availability
-    if ! has_sudo && ! sudo -v 2>/dev/null; then
-        fail "Java installation requires sudo. Please run: sudo apt-get install openjdk-21-jdk"
+    if ! has_sudo; then
+        # Verify sudo is available (will prompt for password if needed)
+        if ! sudo -v 2>/dev/null; then
+            fail "Java installation requires sudo. Please run: sudo apt-get install openjdk-21-jdk"
+        fi
     fi
 
     # Update package list
