@@ -3,7 +3,7 @@
 
 # Environment configuration
 # Override these by setting environment variables or passing to make
-GHIDRA_INSTALL_DIR ?= $(HOME)/ghidra
+GHIDRA_INSTALL_DIR ?= $(HOME)/tools/ghidra
 MSVC_DIR ?= $(HOME)/.msvc
 CLANG_CL ?= clang-cl-19
 LLD_LINK ?= lld-link
