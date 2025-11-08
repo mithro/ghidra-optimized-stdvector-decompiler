@@ -68,6 +68,11 @@ print_info "Building extension..."
 
 export GHIDRA_INSTALL_DIR
 
+# Stop any running Gradle daemons to pick up newly installed JDK
+if [ -f "gradle/bin/gradle" ]; then
+    ./gradle/bin/gradle --stop &>/dev/null || true
+fi
+
 if [ -f "build.sh" ]; then
     bash build.sh
 else
