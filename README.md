@@ -49,9 +49,10 @@ This plugin automatically detects and transforms these optimized patterns back i
 
 ### Prerequisites
 
-- **Ghidra 11.4.2** (or compatible version)
-- **Java 21** or later
-- **Gradle 8.0+** (automatically installed if needed)
+- **Ubuntu/Debian Linux** (or compatible)
+- **sudo access** (for Java installation only)
+- **~500MB free disk space**
+- **Internet connection**
 
 ### Installation
 
@@ -66,11 +67,11 @@ This plugin automatically detects and transforms these optimized patterns back i
    ./setup.sh
    ```
 
-   The script will:
-   - Check dependencies (Java, Gradle)
+   The setup script will automatically:
+   - Install Java 21 (if not present)
+   - Download and install Ghidra 11.4.2 (if not present)
    - Build the extension
-   - Install to Ghidra
-   - **Automatically enable the extension** (no manual configuration needed!)
+   - Install and enable it in Ghidra
 
 3. **Start using Ghidra:**
    ```bash
