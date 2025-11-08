@@ -13,12 +13,12 @@ GCC and Clang use different layouts, so we need MSVC-compatible toolchains to ge
 
 ## Quick Comparison
 
-| Method | Script | Status | CI | Speed | Download | Pros | Cons |
-|--------|--------|--------|-----|-------|----------|------|------|
-| **clang-cl + xwin** | `setup_clangcl.sh` | ✅ Primary | ✅ | Fast | 3GB | Reproducible, no Wine, works in containers | Not "real" MSVC |
-| **msvc-wine** | `setup_msvc_wine.sh` | ✅ Works | ✅ | Slow | 2.7GB | Real MSVC toolchain | Requires Wine, slower |
-| **winetricks** | `setup_msvc_winetricks.sh` | ⚠️ Manual | ❌ | Medium | 2.7GB | Official Microsoft installer | GUI required, manual |
-| **Native Windows** | N/A | ✅ Works | ❌ | Fast | Large | Native Microsoft toolchain | Windows-only |
+| Method              | Script                       | Status      | CI | Speed  | Download | Pros                                       | Cons                   |
+|---------------------|------------------------------|-------------|-------|--------|----------|--------------------------------------------|------------------------|
+| **clang-cl + xwin** | `setup_clangcl.sh`           | ✅ Primary | ✅    | Fast   | 3GB      | Reproducible, no Wine, works in containers | Not "real" MSVC        |
+| **msvc-wine**       | `setup_msvc_wine.sh`         | ✅ Works   | ✅    | Slow   | 2.7GB    | Real MSVC toolchain                        | Requires Wine, slower  |
+| **winetricks**      | `setup_msvc_winetricks.sh`   | ⚠️ Manual  | ❌    | Medium | 2.7GB    | Official Microsoft installer               | GUI required, manual   |
+| **Native Windows**  | N/A                          | ✅ Works   | ❌    | Fast   | Large    | Native Microsoft toolchain                 | Windows-only           |
 
 **Default**: The main `../setup_build_env.sh` uses the clang-cl + xwin method.
 

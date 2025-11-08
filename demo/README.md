@@ -208,11 +208,11 @@ This layout differs from GCC/Clang implementations, which is why MSVC-compatible
 
 Multiple approaches for setting up the build environment are available in `build_setup/`:
 
-| Method | Setup Script | CI-Friendly | Speed | Pros | Cons |
-|--------|-------------|-------------|-------|------|------|
-| **clang-cl + xwin** | `setup_clangcl.sh` | ✅ Yes | Fast | Reproducible, no Wine | 3GB download |
-| **msvc-wine** | `setup_msvc_wine.sh` | ✅ Yes | Slow | Real MSVC | Wine overhead |
-| **winetricks** | `setup_msvc_winetricks.sh` | ❌ No | Medium | Official | GUI required |
+| Method              | Setup Script                 | CI-Friendly | Speed  | Pros                  | Cons          |
+|---------------------|------------------------------|-------------|--------|-----------------------|---------------|
+| **clang-cl + xwin** | `setup_clangcl.sh`           | ✅ Yes      | Fast   | Reproducible, no Wine | 3GB download  |
+| **msvc-wine**       | `setup_msvc_wine.sh`         | ✅ Yes      | Slow   | Real MSVC             | Wine overhead |
+| **winetricks**      | `setup_msvc_winetricks.sh`   | ❌ No       | Medium | Official              | GUI required  |
 
 See `build_setup/README.md` for detailed comparison and instructions.
 
