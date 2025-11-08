@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Verify VectorSimplification extension works correctly.
+Verify OptimizedVectorDecompiler extension works correctly.
 
 This script tests the extension against demo/vector_extra_O2.exe and verifies
 that all expected vector pattern transformations are detected.
@@ -136,7 +136,7 @@ def run_analysis_in_ghidra():
         print("=" * 80)
         print("")
         print("Possible causes:")
-        print("  - VectorSimplification extension not installed or not enabled")
+        print("  - OptimizedVectorDecompiler extension not installed or not enabled")
         print("  - Extension JAR not in $GHIDRA_INSTALL_DIR/Ghidra/Features/Decompiler/lib/")
         print("  - Analyzing wrong binary (use vector_extra_O2.exe, not _Od)")
         return 1

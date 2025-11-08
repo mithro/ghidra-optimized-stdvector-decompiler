@@ -4,7 +4,7 @@ This directory contains scripts for setting up different build environments to c
 
 ## Why MSVC-Compatible Binaries?
 
-The VectorSimplification extension specifically recognizes **MSVC's std::vector internal layout**:
+The OptimizedVectorDecompiler extension specifically recognizes **MSVC's std::vector internal layout**:
 - `_Myfirst` at offset 0x0
 - `_Mylast` at offset 0x8
 - `_Myend` at offset 0x10

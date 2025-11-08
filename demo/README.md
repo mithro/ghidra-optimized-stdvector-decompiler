@@ -1,6 +1,6 @@
 # Vector Simplification Demo
 
-This directory contains demo programs and test binaries that demonstrate the Ghidra VectorSimplification extension's ability to transform optimized MSVC std::vector pointer arithmetic into readable C++ method calls.
+This directory contains demo programs and test binaries that demonstrate the Ghidra OptimizedVectorDecompiler extension's ability to transform optimized MSVC std::vector pointer arithmetic into readable C++ method calls.
 
 ## Quick Start
 
@@ -150,7 +150,7 @@ $GHIDRA_INSTALL_DIR/support/analyzeHeadless \
 
 ## Expected Results
 
-When analyzing `vector_extra_O2.exe` with the VectorSimplification extension, you should see approximately:
+When analyzing `vector_extra_O2.exe` with the OptimizedVectorDecompiler extension, you should see approximately:
 
 - **SIZE patterns**: 5+ transformations to `vec->size()`
 - **EMPTY patterns**: 7+ transformations to `vec->empty()`
@@ -251,7 +251,7 @@ make check-env
 
 ### Extension doesn't detect patterns
 - Verify you're analyzing `*_O2.exe` (optimized), not `*_Od.exe` (debug)
-- Ensure VectorSimplification extension is installed and enabled
+- Ensure OptimizedVectorDecompiler extension is installed and enabled
 - Check that extension JAR is in `$GHIDRA_INSTALL_DIR/Ghidra/Features/Decompiler/lib/`
 
 ## Related Files
