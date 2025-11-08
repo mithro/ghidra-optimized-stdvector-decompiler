@@ -33,28 +33,29 @@ jobs:
           for binary in vector_extra_O2.exe vector_extra_Od.exe; do
             if [ -f "$binary" ]; then
               cp "$binary" "$binary.committed"
-              echo "Backed up $binary to $binary.committed"
-              ls -lh "$binary.committed"
+              echo "Backed up $binary ($(stat -c%s $binary) bytes)"
             else
               echo "ERROR: Committed binary not found: $binary"
               exit 1
             fi
           done
 
-      - name: Build binaries with MSVC
+      - name: Build binaries with native MSVC (matching Makefile flags)
         shell: cmd
         run: |
           cd demo
 
-          REM Build optimized version
-          cl /EHsc /O2 /Zi /std:c++17 /Fe:vector_extra_O2.exe vector_extra.cpp /link /DEBUG /PDB:vector_extra_O2.pdb
+          REM Build optimized version with proper linker flags
+          REM Match Makefile flags: /MD /O2 /Zi + /DEBUG:FULL /OPT:REF /OPT:ICF
+          cl /EHsc /MD /O2 /Zi /std:c++17 /Fe:vector_extra_O2.exe vector_extra.cpp /link /DEBUG:FULL /OPT:REF /OPT:ICF
           if not exist vector_extra_O2.exe (
             echo ERROR: Failed to build vector_extra_O2.exe
             exit /b 1
           )
 
           REM Build debug version
-          cl /EHsc /Od /Zi /std:c++17 /Fe:vector_extra_Od.exe vector_extra.cpp /link /DEBUG /PDB:vector_extra_Od.pdb
+          REM Match Makefile flags: /MD /Od /Zi + /DEBUG:FULL /OPT:NOREF /OPT:NOICF
+          cl /EHsc /MD /Od /Zi /std:c++17 /Fe:vector_extra_Od.exe vector_extra.cpp /link /DEBUG:FULL /OPT:NOREF /OPT:NOICF
           if not exist vector_extra_Od.exe (
             echo ERROR: Failed to build vector_extra_Od.exe
             exit /b 1
@@ -116,13 +117,15 @@ jobs:
             echo "ERROR: Binary verification failed!"
             echo "============================================================"
             echo ""
-            echo "To update binaries on Windows:"
-            echo "  1. Setup MSVC build environment"
-            echo "  2. cd demo"
-            echo "  3. cl /EHsc /O2 /Zi /std:c++17 /Fe:vector_extra_O2.exe vector_extra.cpp /link /DEBUG"
-            echo "  4. cl /EHsc /Od /Zi /std:c++17 /Fe:vector_extra_Od.exe vector_extra.cpp /link /DEBUG"
-            echo "  5. git add vector_extra_O2.exe vector_extra_Od.exe *.pdb"
-            echo "  6. git commit -m 'build: Update demo binaries'"
+            echo "Note: Binaries differ between cl.exe (MSVC) and clang-cl."
+            echo "Committed binaries were built with clang-cl (Linux workflow)."
+            echo ""
+            echo "To update binaries, use the Linux workflow or run:"
+            echo "  cd demo"
+            echo "  ./setup_build_env.sh"
+            echo "  make extra"
+            echo "  git add vector_extra_O2.exe vector_extra_Od.exe *.pdb"
+            echo "  git commit -m 'build: Update demo binaries'"
             echo "============================================================"
           fi
 

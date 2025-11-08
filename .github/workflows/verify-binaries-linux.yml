@@ -45,7 +45,8 @@ jobs:
         run: |
           cd demo
           chmod +x setup_build_env.sh
-          ./setup_build_env.sh
+          # Auto-confirm setup (non-interactive for CI)
+          echo "y" | ./setup_build_env.sh
           make extra
         timeout-minutes: 45
 
