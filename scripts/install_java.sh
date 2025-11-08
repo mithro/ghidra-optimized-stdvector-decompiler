@@ -14,8 +14,10 @@ check_java_version() {
     fi
 
     # Parse Java version (handles both old "1.8" and new "21" formats)
-    local version_output=$(java -version 2>&1 | head -n 1)
-    local java_version=$(echo "$version_output" | sed -n 's/.*version "\(.*\)".*/\1/p' | cut -d'.' -f1)
+    local version_output
+    version_output=$(java -version 2>&1 | head -n 1)
+    local java_version
+    java_version=$(echo "$version_output" | sed -n 's/.*version "\(.*\)".*/\1/p' | cut -d'.' -f1)
 
     # Handle old version format (1.x)
     if [ "$java_version" = "1" ]; then
@@ -59,7 +61,8 @@ run_java_installer() {
     echo -e "${BLUE}Checking Java installation...${NC}"
 
     if check_java_version; then
-        local version=$(java -version 2>&1 | head -n 1 | cut -d'"' -f2)
+        local version
+        version=$(java -version 2>&1 | head -n 1 | cut -d'"' -f2)
         print_status "Java found: $version"
         return 0
     fi
@@ -69,7 +72,8 @@ run_java_installer() {
 
     # Verify installation
     if check_java_version; then
-        local version=$(java -version 2>&1 | head -n 1 | cut -d'"' -f2)
+        local version
+        version=$(java -version 2>&1 | head -n 1 | cut -d'"' -f2)
         print_status "Java installation verified: $version"
     else
         fail "Java installation failed verification"
