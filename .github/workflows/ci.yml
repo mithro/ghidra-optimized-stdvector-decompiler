@@ -91,21 +91,10 @@ jobs:
           curl -LsSf https://astral.sh/uv/install.sh | sh
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
-      - name: Create temporary Ghidra project directory
-        run: |
-          mkdir -p /tmp/ghidra_test_project
-
       - name: Run integration tests
         run: |
           export PATH="$HOME/.cargo/bin:$PATH"
-          cd examples/vector_test
-
-          # Run Ghidra headless analysis with test script
-          "$GHIDRA_INSTALL_DIR/support/analyzeHeadless" \
-            /tmp/ghidra_test_project TestProject \
-            -import vector_test_msvc.exe \
-            -postScript test_transformation.py \
-            -noanalysis
+          uv run python test.py
         env:
           GHIDRA_INSTALL_DIR: ${{ env.GHIDRA_INSTALL_DIR }}
 
