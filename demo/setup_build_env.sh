@@ -32,23 +32,50 @@ fi
 
 # Step 1: Install prerequisites
 echo ""
-echo "[1/4] Installing prerequisites..."
-sudo apt-get update -qq
-sudo apt-get install -y python3 msitools ca-certificates wget git curl
+echo "[1/4] Checking prerequisites..."
+
+# Check which packages are missing
+MISSING_PKGS=""
+for pkg in python3 msitools ca-certificates wget git curl; do
+	if ! dpkg -l "$pkg" 2>/dev/null | grep -q "^ii"; then
+		MISSING_PKGS="$MISSING_PKGS $pkg"
+	fi
+done
+
+if [ -n "$MISSING_PKGS" ]; then
+	echo "Installing missing packages:$MISSING_PKGS"
+	sudo apt-get update -qq
+	sudo apt-get install -y $MISSING_PKGS
+else
+	echo "✓ All prerequisites already installed"
+fi
 
 # Step 2: Install clang-19
 echo ""
-echo "[2/4] Installing clang-19..."
+echo "[2/4] Checking clang-19..."
 if ! command -v clang-cl-19 &> /dev/null; then
-    echo "Installing LLVM 19 from Ubuntu repositories..."
-    sudo apt-get install -y clang-19 lld-19
+    # Check if clang-19 packages are already installed
+    MISSING_CLANG=""
+    for pkg in clang-19 lld-19; do
+        if ! dpkg -l "$pkg" 2>/dev/null | grep -q "^ii"; then
+            MISSING_CLANG="$MISSING_CLANG $pkg"
+        fi
+    done
+
+    if [ -n "$MISSING_CLANG" ]; then
+        echo "Installing LLVM 19 packages:$MISSING_CLANG"
+        sudo apt-get install -y $MISSING_CLANG
+    else
+        echo "✓ LLVM 19 packages already installed"
+    fi
 
     # Create clang-cl-19 symlink if needed
     if [ ! -e /usr/bin/clang-cl-19 ]; then
+        echo "Creating clang-cl-19 symlink..."
         sudo ln -s /usr/lib/llvm-19/bin/clang /usr/bin/clang-cl-19
     fi
 
-    echo "✓ clang-19 installed: $(clang-cl-19 --version | head -1)"
+    echo "✓ clang-19 configured: $(clang-cl-19 --version | head -1)"
 else
     echo "✓ clang-cl-19 already installed: $(clang-cl-19 --version | head -1)"
 fi
