@@ -30,6 +30,11 @@ public class ClangTokenRewriter {
         this.opToToken = new HashMap<>();
         this.nodesToReplace = new HashSet<>();
 
+        System.err.println("[ClangTokenRewriter] Received " + patterns.size() + " patterns for rewriting:");
+        for (VectorPattern pattern : patterns) {
+            System.err.println("  - " + pattern.getType() + " pattern at op " + pattern.getOperation().getSeqnum());
+        }
+
         // Build mapping from PcodeOp to pattern
         for (VectorPattern pattern : patterns) {
             opToPattern.put(pattern.getOperation(), pattern);
@@ -38,6 +43,8 @@ public class ClangTokenRewriter {
         // Build mapping from PcodeOp to ClangToken and identify expression boundaries
         buildTokenMapping(rootMarkup);
         identifyReplacementNodes();
+
+        System.err.println("[ClangTokenRewriter] Identified " + nodesToReplace.size() + " nodes to replace");
     }
 
     /**
@@ -72,7 +79,12 @@ public class ClangTokenRewriter {
                 ClangNode expressionRoot = findExpressionRoot(rootToken, pattern);
                 if (expressionRoot != null) {
                     nodesToReplace.add(expressionRoot);
+                    System.err.println("  [OK] " + pattern.getType() + " pattern -> will replace node");
+                } else {
+                    System.err.println("  [SKIP] " + pattern.getType() + " pattern -> no expression root found");
                 }
+            } else {
+                System.err.println("  [SKIP] " + pattern.getType() + " pattern -> no ClangToken for op " + pattern.getOperation().getSeqnum());
             }
         }
     }
