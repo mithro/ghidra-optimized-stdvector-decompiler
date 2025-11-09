@@ -1,0 +1,89 @@
+name: 'Setup Ghidra'
+description: 'Download, cache, and setup Ghidra for CI'
+inputs:
+  ghidra-version:
+    description: 'Ghidra version to install (e.g., 11.4.1, 11.4.2)'
+    required: true
+  ghidra-url:
+    description: 'Custom download URL (optional)'
+    required: false
+    default: ''
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Cache Ghidra
+      id: cache-ghidra
+      uses: actions/cache@v4
+      with:
+        path: ~/.ghidra-ci/ghidra_${{ inputs.ghidra-version }}
+        key: ghidra-${{ inputs.ghidra-version }}-${{ runner.os }}
+
+    - name: Download Ghidra
+      if: steps.cache-ghidra.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        set -e
+        VERSION="${{ inputs.ghidra-version }}"
+        INSTALL_DIR="$HOME/.ghidra-ci/ghidra_${VERSION}"
+        mkdir -p "$INSTALL_DIR"
+
+        # Determine download URL
+        if [ -n "${{ inputs.ghidra-url }}" ]; then
+          URL="${{ inputs.ghidra-url }}"
+        else
+          # Map version to release date
+          case "$VERSION" in
+            11.4.1)
+              DATE="20250731"
+              ;;
+            11.4.2)
+              DATE="20250826"
+              ;;
+            *)
+              echo "ERROR: Unknown Ghidra version $VERSION"
+              echo "Please provide custom ghidra-url input"
+              exit 1
+              ;;
+          esac
+          URL="https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_${VERSION}_build/ghidra_${VERSION}_PUBLIC_${DATE}.zip"
+        fi
+
+        echo "Downloading Ghidra ${VERSION} from ${URL}"
+
+        # Download with retries
+        for i in 1 2 3; do
+          if curl -L -o /tmp/ghidra.zip "$URL"; then
+            break
+          fi
+          echo "Download attempt $i failed, retrying..."
+          sleep 5
+        done
+
+        # Verify download
+        if [ ! -f /tmp/ghidra.zip ]; then
+          echo "ERROR: Failed to download Ghidra"
+          exit 1
+        fi
+
+        # Extract
+        echo "Extracting Ghidra..."
+        unzip -q /tmp/ghidra.zip -d /tmp/
+        mv /tmp/ghidra_${VERSION}_PUBLIC "$INSTALL_DIR/ghidra"
+        rm /tmp/ghidra.zip
+
+        # Verify installation
+        if [ ! -f "$INSTALL_DIR/ghidra/support/analyzeHeadless" ]; then
+          echo "ERROR: Ghidra installation incomplete"
+          exit 1
+        fi
+
+        echo "Ghidra ${VERSION} installed successfully"
+
+    - name: Set environment variables
+      shell: bash
+      run: |
+        GHIDRA_DIR="$HOME/.ghidra-ci/ghidra_${{ inputs.ghidra-version }}/ghidra"
+        echo "GHIDRA_INSTALL_DIR=$GHIDRA_DIR" >> $GITHUB_ENV
+        echo "$GHIDRA_DIR/support" >> $GITHUB_PATH
+        echo "Ghidra ready at $GHIDRA_DIR"

@@ -1,5 +1,9 @@
 # Optimized std::vector Decompiler - Ghidra Plugin
 
+[![CI](https://github.com/mithro/ghidra-optimized-stdvector-decompiler/actions/workflows/ci.yml/badge.svg)](https://github.com/mithro/ghidra-optimized-stdvector-decompiler/actions/workflows/ci.yml)
+[![Verify Binaries (Linux)](https://github.com/mithro/ghidra-optimized-stdvector-decompiler/actions/workflows/verify-binaries-linux.yml/badge.svg)](https://github.com/mithro/ghidra-optimized-stdvector-decompiler/actions/workflows/verify-binaries-linux.yml)
+[![Verify Binaries (Windows)](https://github.com/mithro/ghidra-optimized-stdvector-decompiler/actions/workflows/verify-binaries-windows.yml/badge.svg)](https://github.com/mithro/ghidra-optimized-stdvector-decompiler/actions/workflows/verify-binaries-windows.yml)
+
 A Ghidra plugin which improves the decompilation output of std::vectors in binaries that are compiled with optimization on (Currently MSVC++ focused).
 
 ## Overview

@@ -12,7 +12,7 @@ echo "Demo Build Environment Setup"
 echo "========================================================================="
 echo ""
 echo "This script will:"
-echo "  1. Install clang-19 and lld linker"
+echo "  1. Install clang-20 and lld linker"
 echo "  2. Download MSVC 14.44 headers and Windows SDK 10.0.26100 (~2.7GB)"
 echo "  3. Set up directory structure"
 echo ""
@@ -23,12 +23,6 @@ echo "  - Internet connection"
 echo ""
 echo "Installation directory: $MSVC_DIR"
 echo ""
-read -p "Continue? (y/N): " -n 1 -r
-echo
-if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    echo "Setup cancelled."
-    exit 0
-fi
 
 # Step 1: Install prerequisites
 echo ""
@@ -50,34 +44,34 @@ else
 	echo "✓ All prerequisites already installed"
 fi
 
-# Step 2: Install clang-19
+# Step 2: Install clang-20
 echo ""
-echo "[2/4] Checking clang-19..."
-if ! command -v clang-cl-19 &> /dev/null; then
-    # Check if clang-19 packages are already installed
+echo "[2/4] Checking clang-20..."
+if ! command -v clang-cl-20 &> /dev/null; then
+    # Check if clang-20 packages are already installed
     MISSING_CLANG=""
-    for pkg in clang-19 lld-19; do
+    for pkg in clang-20 lld-20; do
         if ! dpkg -l "$pkg" 2>/dev/null | grep -q "^ii"; then
             MISSING_CLANG="$MISSING_CLANG $pkg"
         fi
     done
 
     if [ -n "$MISSING_CLANG" ]; then
-        echo "Installing LLVM 19 packages:$MISSING_CLANG"
+        echo "Installing LLVM 20 packages:$MISSING_CLANG"
         sudo apt-get install -y $MISSING_CLANG
     else
-        echo "✓ LLVM 19 packages already installed"
+        echo "✓ LLVM 20 packages already installed"
     fi
 
-    # Create clang-cl-19 symlink if needed
-    if [ ! -e /usr/bin/clang-cl-19 ]; then
-        echo "Creating clang-cl-19 symlink..."
-        sudo ln -s /usr/lib/llvm-19/bin/clang /usr/bin/clang-cl-19
+    # Create clang-cl-20 symlink if needed
+    if [ ! -e /usr/bin/clang-cl-20 ]; then
+        echo "Creating clang-cl-20 symlink..."
+        sudo ln -s /usr/lib/llvm-20/bin/clang /usr/bin/clang-cl-20
     fi
 
-    echo "✓ clang-19 configured: $(clang-cl-19 --version | head -1)"
+    echo "✓ clang-20 configured: $(clang-cl-20 --version | head -1)"
 else
-    echo "✓ clang-cl-19 already installed: $(clang-cl-19 --version | head -1)"
+    echo "✓ clang-cl-20 already installed: $(clang-cl-20 --version | head -1)"
 fi
 
 # Step 3: Download msvc-wine tool

@@ -5,8 +5,8 @@
 # Override these by setting environment variables or passing to make
 GHIDRA_INSTALL_DIR ?= $(HOME)/tools/ghidra
 MSVC_DIR ?= $(HOME)/.msvc
-CLANG_CL ?= clang-cl-19
-LLD_LINK ?= lld-link
+CLANG_CL ?= clang-cl-20
+LLD_LINK ?= lld-link-20
 
 # MSVC paths (auto-detected from MSVC_DIR)
 MSVC_VERSION := 14.44.35207
@@ -29,7 +29,9 @@ CXXFLAGS_Od := /Od /Zi
 LINKFLAGS := /LIBPATH:"$(MSVC_LIB)" \
 	/LIBPATH:"$(SDK_LIB)/ucrt/x64" \
 	/LIBPATH:"$(SDK_LIB)/um/x64" \
-	/DEBUG:FULL
+	/DEBUG:FULL \
+	/stub:$(CURDIR)/build_setup/dosstub.exe \
+	/Brepro
 
 LINKFLAGS_O2 := /OPT:REF /OPT:ICF
 LINKFLAGS_Od := /OPT:NOREF /OPT:NOICF
