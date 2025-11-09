@@ -152,17 +152,13 @@ check-env:
 
 # Run pattern analysis
 .PHONY: test
-test: vector_extra_O2.exe
-	@echo "Running pattern analysis on vector_extra_O2.exe..."
+test: init-submodule
+	@echo "Running pattern analysis on all compilers..."
 	@if [ ! -f "../test.py" ]; then \
 		echo "Warning: ../test.py not found"; \
-		echo "Running local analysis script instead..."; \
-		$(GHIDRA_INSTALL_DIR)/support/analyzeHeadless \
-			. VectorExtraDemo \
-			-import vector_extra_O2.exe \
-			-postScript scripts/analyze_patterns.py; \
+		exit 1; \
 	else \
-		python3 ../test.py; \
+		cd .. && python3 test.py; \
 	fi
 
 # Clean build artifacts
