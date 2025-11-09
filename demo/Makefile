@@ -42,8 +42,8 @@ LINKFLAGS_Od := /OPT:NOREF /OPT:NOICF
 SOURCES := vector_basic.cpp vector_extra.cpp
 
 # Binary targets
-BINARIES_O2 := $(SOURCES:.cpp=_O2.exe)
-BINARIES_Od := $(SOURCES:.cpp=_Od.exe)
+BINARIES_O2 := $(addprefix $(OUT_DIR)/,$(SOURCES:.cpp=_O2.exe))
+BINARIES_Od := $(addprefix $(OUT_DIR)/,$(SOURCES:.cpp=_Od.exe))
 ALL_BINARIES := $(BINARIES_O2) $(BINARIES_Od)
 
 # Ghidra project targets
@@ -65,8 +65,8 @@ debug: $(BINARIES_Od)
 
 # Individual source targets
 .PHONY: basic extra
-basic: vector_basic_O2.exe vector_basic_Od.exe
-extra: vector_extra_O2.exe vector_extra_Od.exe
+basic: $(OUT_DIR)/vector_basic_O2.exe $(OUT_DIR)/vector_basic_Od.exe
+extra: $(OUT_DIR)/vector_extra_O2.exe $(OUT_DIR)/vector_extra_Od.exe
 
 # Initialize submodule if not already done
 .PHONY: init-submodule
@@ -77,18 +77,18 @@ init-submodule:
 	fi
 
 # Pattern rules for building binaries
-%_O2.exe: %.cpp init-submodule
+$(OUT_DIR)/%_O2.exe: %.cpp | init-submodule
 	@echo "Building optimized binary: $@ with $(COMPILER)"
 	@mkdir -p $(OUT_DIR)
 	$(CLANG_CL) $(CXXFLAGS_COMMON) $(CXXFLAGS_O2) \
-		/Fe:$(OUT_DIR)/$@ $< \
+		/Fe:$@ $< \
 		/link $(LINKFLAGS) $(LINKFLAGS_O2)
 
-%_Od.exe: %.cpp init-submodule
+$(OUT_DIR)/%_Od.exe: %.cpp | init-submodule
 	@echo "Building debug binary: $@ with $(COMPILER)"
 	@mkdir -p $(OUT_DIR)
 	$(CLANG_CL) $(CXXFLAGS_COMMON) $(CXXFLAGS_Od) \
-		/Fe:$(OUT_DIR)/$@ $< \
+		/Fe:$@ $< \
 		/link $(LINKFLAGS) $(LINKFLAGS_Od)
 
 # Generate Ghidra projects for all binaries
