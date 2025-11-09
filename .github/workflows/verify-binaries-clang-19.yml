@@ -13,16 +13,16 @@ on:
 
 jobs:
   verify-clang-19:
-    name: Rebuild and verify binaries (Wine + clang-19)
+    name: Verify committed binaries match source (Wine + clang-19)
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout code with committed binaries
         uses: actions/checkout@v4
         with:
           submodules: true
 
-      - name: Install prerequisites
+      - name: Install build tools
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y python3 msitools ca-certificates wget git curl
@@ -41,7 +41,7 @@ jobs:
             fi
           done
 
-      - name: Setup MSVC toolchain and build binaries
+      - name: Rebuild binaries from current source code
         run: |
           cd demo
           make COMPILER=clang-19 extra
@@ -52,7 +52,7 @@ jobs:
           curl -LsSf https://astral.sh/uv/install.sh | sh
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
-      - name: Compare rebuilt binaries to committed versions
+      - name: Verify committed binaries match rebuilt binaries
         run: |
           export PATH="$HOME/.cargo/bin:$PATH"
           cd demo
@@ -76,12 +76,12 @@ jobs:
             if uv run python scripts/compare_binaries.py \
                 "$binary.committed" \
                 "$binary"; then
-              echo "SUCCESS: $binary matches committed version"
+              echo "✓ PASS: Committed binary matches current source/config"
             else
               COMPARE_EXIT=$?
               if [ $COMPARE_EXIT -eq 1 ]; then
                 echo ""
-                echo "ERROR: $binary differs from committed version!"
+                echo "✗ FAIL: Committed binary is STALE!\n  Source code or build config changed - binary needs updating"
                 EXIT_CODE=1
               else
                 echo "ERROR: Comparison failed with exit code $COMPARE_EXIT"
@@ -93,7 +93,7 @@ jobs:
           if [ $EXIT_CODE -ne 0 ]; then
             echo ""
             echo "============================================================"
-            echo "ERROR: Binary verification failed!"
+            echo "ERROR: Committed binaries are out of sync with source!"
             echo "============================================================"
             echo ""
             echo "To update binaries:"
