@@ -53,6 +53,34 @@ The build script automatically:
 - Offers to install Gradle 8.10.2 locally if needed
 - Builds the extension using Ghidra's buildExtension.gradle
 
+### Build Demo Binaries
+
+**Clone with submodule:**
+```bash
+git clone --recurse-submodules git@github.com:mithro/ghidra-optimized-stdvector-decompiler.git
+# OR if already cloned:
+git submodule update --init
+```
+
+**Build with default compiler (clang-19):**
+```bash
+cd demo
+make
+```
+
+**Build with specific compiler:**
+```bash
+make COMPILER=clang-20 all
+make COMPILER=msvc-14.44 optimized
+```
+
+**List available compilers:**
+```bash
+make list-compilers
+```
+
+Binaries are output to `demo/out/{compiler}/` directory.
+
 ### One-Step Setup (Recommended)
 ```bash
 ./setup.sh
