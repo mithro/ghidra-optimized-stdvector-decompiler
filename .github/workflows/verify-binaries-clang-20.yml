@@ -56,8 +56,8 @@ jobs:
           cd demo
           for binary in out/clang-20/vector_extra_O2.exe out/clang-20/vector_extra_Od.exe; do
             if [ -f "$binary" ]; then
-              cp "$binary" "$binary.committed"
-              echo "Backed up $binary to $binary.committed"
+              mv "$binary" "$binary.committed"
+              echo "Moved $binary to $binary.committed"
               ls -lh "$binary.committed"
             else
               echo "ERROR: Committed binary not found: $binary"
