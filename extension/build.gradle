@@ -56,3 +56,8 @@ dependencies {
 	// SLF4J for logging
 	// Note: Ghidra provides most dependencies, this is only for external libs
 }
+
+// Configure jar task to use the extension name from extension.properties
+jar {
+	archiveBaseName = 'OptimizedVectorDecompiler'
+}
