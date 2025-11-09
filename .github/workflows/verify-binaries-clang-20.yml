@@ -27,6 +27,30 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y python3 msitools ca-certificates wget git curl clang-20 lld-20
 
+      - name: Cache MSVC toolchain
+        id: cache-msvc
+        uses: actions/cache@v4
+        with:
+          path: ~/.msvc
+          key: msvc-14.44-sdk-10.0.26100-${{ runner.os }}-${{ hashFiles('demo/setup_build_env_user.sh') }}
+
+      - name: Setup MSVC toolchain (download if not cached)
+        if: steps.cache-msvc.outputs.cache-hit != 'true'
+        run: |
+          cd demo
+          bash ./setup_build_env_user.sh
+
+      - name: Verify MSVC toolchain
+        run: |
+          echo "Checking MSVC toolchain at ~/.msvc"
+          if [ -f ~/.msvc/Windows\ Kits/10/Include/10.0.26100.0/ucrt/malloc.h ]; then
+            echo "✓ MSVC toolchain available at ~/.msvc"
+            du -sh ~/.msvc
+          else
+            echo "✗ ERROR: MSVC toolchain not found - build will fail"
+            exit 1
+          fi
+
       - name: Backup committed binaries before rebuild
         run: |
           cd demo
