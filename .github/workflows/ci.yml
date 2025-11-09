@@ -74,6 +74,16 @@ jobs:
           name: extension-jar-java${{ matrix.java-version }}
           path: extension/build/libs/
 
+      - name: Debug - List downloaded files
+        run: |
+          echo "Contents of extension/build/libs/:"
+          ls -lR extension/build/libs/ || echo "Directory not found"
+          echo "Looking for JAR from setup.sh perspective:"
+          SCRIPT_DIR="$(pwd)"
+          echo "SCRIPT_DIR=$SCRIPT_DIR"
+          echo "Looking for: $SCRIPT_DIR/extension/build/libs/OptimizedVectorDecompiler.jar"
+          ls -l "$SCRIPT_DIR/extension/build/libs/OptimizedVectorDecompiler.jar" || echo "JAR not found at expected path"
+
       - name: Install extension using setup.sh
         run: |
           # Run setup.sh with --skip-build since JAR already exists
