@@ -27,6 +27,12 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y python3 msitools ca-certificates wget git curl clang-19 lld-19
 
+      - name: Create clang-cl symlinks
+        run: |
+          sudo ln -sf /usr/lib/llvm-19/bin/clang /usr/bin/clang-cl-19
+          sudo ln -sf /usr/lib/llvm-19/bin/lld-link /usr/bin/lld-link-19
+          echo "✓ Created clang-cl-19: $(clang-cl-19 --version | head -1)"
+
       - name: Cache MSVC toolchain
         id: cache-msvc
         uses: actions/cache@v4
