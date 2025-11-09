@@ -73,34 +73,32 @@ def test_compiler(compiler, ghidra_dir, demo_dir="demo"):
         ]
 
         print("  Running Ghidra analysis...")
+        print("  " + "-" * 76)
+
+        # Run Ghidra with output streaming to show progress
+        # We capture output to parse for pass/fail, but also print it in real-time
         result = subprocess.run(cmd, check=False, capture_output=True, text=True)
+
+        # Print all output with indentation
+        output = result.stdout + result.stderr
+        for line in output.split('\n'):
+            if line.strip():
+                print("  " + line)
+
+        print("  " + "-" * 76)
         print("  Analysis complete (exit code: %d)" % result.returncode)
 
         # Clean up temp directory
         shutil.rmtree(temp_dir, ignore_errors=True)
 
         # Parse output to determine pass/fail
-        output = result.stdout + result.stderr
-
-        # DEBUG: Print output in CI mode
-        if os.environ.get('CI') or os.environ.get('DEBUG_TEST'):
-            print("  ===== FULL GHIDRA OUTPUT (last 100 lines) =====")
-            for line in output.split('\n')[-100:]:
-                if line.strip():
-                    print("  %s" % line)
-            print("  ===== END GHIDRA OUTPUT =====")
-
         if "ALL TESTS PASSED" in output:
             return True
         elif "SOME TESTS FAILED" in output:
             return False
         else:
-            # If we can't determine, print some output for debugging
+            # If we can't determine test result
             print("  WARNING: Could not determine test result from output")
-            print("  Last 50 lines of output:")
-            for line in output.split('\n')[-50:]:
-                if line.strip():
-                    print("    %s" % line)
             return False
 
     except Exception as e:
