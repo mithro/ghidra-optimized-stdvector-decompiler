@@ -96,6 +96,69 @@ size_t size = (field_0x10 - field_0x8) >> 2;
 
 This is exactly what appears in optimized shipping binaries, making the extension valuable for reverse engineering.
 
+## Multi-Compiler Build Matrix
+
+Demo binaries are stored in a git submodule at `demo/out/` organized by compiler.
+
+### Available Compilers
+
+List available compilers:
+```bash
+make list-compilers
+```
+
+Current matrix:
+- `clang-19` - LLVM 19 with clang-cl MSVC compatibility
+- `clang-20` - LLVM 20 with clang-cl MSVC compatibility
+- `msvc-14.44` - Native MSVC 14.44.35207 via Wine
+
+### Building for Different Compilers
+
+**Default (clang-19):**
+```bash
+make
+```
+
+**Specific compiler:**
+```bash
+make COMPILER=clang-20 all
+make COMPILER=msvc-14.44 optimized
+```
+
+**Output location:** `out/{compiler}/vector_*_O2.exe`
+
+### Adding New Compiler Variants
+
+1. Build binaries:
+```bash
+make COMPILER=clang-21 all
+```
+
+2. Commit to submodule:
+```bash
+cd out
+git add clang-21/
+git commit -m "Add clang-21 binaries"
+git push
+```
+
+3. Update main repo:
+```bash
+cd ../..
+git add demo/out
+git commit -m "Update binaries: add clang-21"
+```
+
+### Testing
+
+Test all compilers:
+```bash
+cd ..
+python3 test.py
+```
+
+Tests automatically discover and validate all compiler variants.
+
 ## Build System
 
 ### Makefile Targets
