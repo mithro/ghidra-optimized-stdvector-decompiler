@@ -51,13 +51,14 @@ jobs:
             exit 1
           fi
 
-      - name: Backup committed binaries before rebuild
+      - name: Backup and remove committed binaries to force rebuild
         run: |
           cd demo
           for binary in out/clang-20/vector_extra_O2.exe out/clang-20/vector_extra_Od.exe; do
             if [ -f "$binary" ]; then
               cp "$binary" "$binary.committed"
-              echo "Backed up $binary to $binary.committed"
+              rm "$binary"
+              echo "Backed up and removed $binary"
               ls -lh "$binary.committed"
             else
               echo "ERROR: Committed binary not found: $binary"
@@ -68,7 +69,7 @@ jobs:
       - name: Rebuild binaries from current source code
         run: |
           cd demo
-          make -B COMPILER=clang-20 extra
+          make COMPILER=clang-20 extra
         timeout-minutes: 45
 
       - name: Setup Python and uv

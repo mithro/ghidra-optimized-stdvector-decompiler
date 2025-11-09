@@ -30,14 +30,15 @@ jobs:
         with:
           arch: x64
 
-      - name: Backup committed binaries before rebuild
+      - name: Backup and remove committed binaries to force rebuild
         shell: bash
         run: |
           cd demo
           for binary in out/msvc-14.44/vector_extra_O2.exe out/msvc-14.44/vector_extra_Od.exe; do
             if [ -f "$binary" ]; then
               cp "$binary" "$binary.committed"
-              echo "Backed up $binary to $binary.committed"
+              rm "$binary"
+              echo "Backed up and removed $binary"
               ls -lh "$binary.committed"
             else
               echo "ERROR: Committed binary not found: $binary"
@@ -49,7 +50,7 @@ jobs:
         shell: bash
         run: |
           cd demo
-          make -B COMPILER=msvc-14.44 extra
+          make COMPILER=msvc-14.44 extra
         timeout-minutes: 45
 
       - name: Setup Python
