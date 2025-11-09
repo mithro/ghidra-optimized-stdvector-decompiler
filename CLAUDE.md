@@ -172,9 +172,11 @@ DATA pattern only matches when pointer is actually used:
 
 ## Requirements
 
-- **Ghidra**: 11.4.2 (or compatible version)
-- **Java**: 21 or later
-- **Gradle**: 8.0+ (build.sh can install locally if missing)
+**Note:** The `setup.sh` script automatically installs Java and Ghidra if not present.
+
+- **Ghidra**: 11.4.2 (auto-installed by setup.sh if needed)
+- **Java**: 21 or later (auto-installed by setup.sh if needed)
+- **Gradle**: 8.0+ (auto-installed locally by build.sh if needed)
 - **Target Binaries**: MSVC-compiled Windows executables (64-bit)
 - **Type Information**: PDB debug symbols recommended for best results
 

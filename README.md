@@ -1,5 +1,9 @@
 # Optimized std::vector Decompiler - Ghidra Plugin
 
+[![CI](https://github.com/mithro/ghidra-optimized-stdvector-decompiler/actions/workflows/ci.yml/badge.svg)](https://github.com/mithro/ghidra-optimized-stdvector-decompiler/actions/workflows/ci.yml)
+[![Verify Binaries (Linux)](https://github.com/mithro/ghidra-optimized-stdvector-decompiler/actions/workflows/verify-binaries-linux.yml/badge.svg)](https://github.com/mithro/ghidra-optimized-stdvector-decompiler/actions/workflows/verify-binaries-linux.yml)
+[![Verify Binaries (Windows)](https://github.com/mithro/ghidra-optimized-stdvector-decompiler/actions/workflows/verify-binaries-windows.yml/badge.svg)](https://github.com/mithro/ghidra-optimized-stdvector-decompiler/actions/workflows/verify-binaries-windows.yml)
+
 A Ghidra plugin which improves the decompilation output of std::vectors in binaries that are compiled with optimization on (Currently MSVC++ focused).
 
 ## Overview
@@ -49,9 +53,16 @@ This plugin automatically detects and transforms these optimized patterns back i
 
 ### Prerequisites
 
-- **Ghidra 11.4.2** (or compatible version)
-- **Java 21** or later
-- **Gradle 8.0+** (automatically installed if needed)
+**Platform Requirements:**
+- Ubuntu/Debian Linux (or compatible)
+- sudo access (for Java installation only)
+- ~500MB free disk space
+- Internet connection
+
+**Software (automatically installed if needed):**
+- Java 21 or later
+- Ghidra 11.4.2
+- Gradle 8.0+ (installed locally by build script if needed)
 
 ### Installation
 
@@ -71,11 +82,11 @@ This plugin automatically detects and transforms these optimized patterns back i
    ./setup.sh
    ```
 
-   The script will:
-   - Check dependencies (Java, Gradle)
+   The setup script will automatically:
+   - Install Java 21 (if not present)
+   - Download and install Ghidra 11.4.2 (if not present)
    - Build the extension
-   - Install to Ghidra
-   - **Automatically enable the extension** (no manual configuration needed!)
+   - Install and enable it in Ghidra
 
 3. **Start using Ghidra:**
    ```bash

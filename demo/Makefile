@@ -3,21 +3,21 @@
 
 # Environment configuration
 # Override these by setting environment variables or passing to make
-GHIDRA_INSTALL_DIR ?= $(HOME)/ghidra
+GHIDRA_INSTALL_DIR ?= $(HOME)/tools/ghidra
 MSVC_DIR ?= $(HOME)/.msvc
-CLANG_CL ?= clang-cl-19
-LLD_LINK ?= lld-link
+CLANG_CL ?= clang-cl-20
+LLD_LINK ?= lld-link-20
 
 # Compiler identification for output directory
-COMPILER ?= clang-19
+COMPILER ?= clang-20
 OUT_DIR = out/$(COMPILER)
 
 # MSVC paths (auto-detected from MSVC_DIR)
 MSVC_VERSION := 14.44.35207
 SDK_VERSION := 10.0.26100.0
-MSVC_INCLUDE := $(MSVC_DIR)/unpack/VC/Tools/MSVC/$(MSVC_VERSION)/include
+MSVC_INCLUDE := $(MSVC_DIR)/VC/Tools/MSVC/$(MSVC_VERSION)/include
 SDK_INCLUDE := $(MSVC_DIR)/Windows Kits/10/Include/$(SDK_VERSION)
-MSVC_LIB := $(MSVC_DIR)/unpack/VC/Tools/MSVC/$(MSVC_VERSION)/lib/x64
+MSVC_LIB := $(MSVC_DIR)/VC/Tools/MSVC/$(MSVC_VERSION)/lib/x64
 SDK_LIB := $(MSVC_DIR)/Windows Kits/10/Lib/$(SDK_VERSION)
 
 # Compiler flags
@@ -33,7 +33,9 @@ CXXFLAGS_Od := /Od /Zi
 LINKFLAGS := /LIBPATH:"$(MSVC_LIB)" \
 	/LIBPATH:"$(SDK_LIB)/ucrt/x64" \
 	/LIBPATH:"$(SDK_LIB)/um/x64" \
-	/DEBUG:FULL
+	/DEBUG:FULL \
+	/stub:$(CURDIR)/build_setup/dosstub.exe \
+	/Brepro
 
 LINKFLAGS_O2 := /OPT:REF /OPT:ICF
 LINKFLAGS_Od := /OPT:NOREF /OPT:NOICF

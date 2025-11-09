@@ -12,7 +12,7 @@ echo "Demo Build Environment Setup"
 echo "========================================================================="
 echo ""
 echo "This script will:"
-echo "  1. Install clang-19 and lld linker"
+echo "  1. Install clang-20 and lld linker"
 echo "  2. Download MSVC 14.44 headers and Windows SDK 10.0.26100 (~2.7GB)"
 echo "  3. Set up directory structure"
 echo ""
@@ -23,34 +23,55 @@ echo "  - Internet connection"
 echo ""
 echo "Installation directory: $MSVC_DIR"
 echo ""
-read -p "Continue? (y/N): " -n 1 -r
-echo
-if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    echo "Setup cancelled."
-    exit 0
-fi
 
 # Step 1: Install prerequisites
 echo ""
-echo "[1/4] Installing prerequisites..."
-sudo apt-get update -qq
-sudo apt-get install -y python3 msitools ca-certificates wget git curl
+echo "[1/4] Checking prerequisites..."
 
-# Step 2: Install clang-19
+# Check which packages are missing
+MISSING_PKGS=""
+for pkg in python3 msitools ca-certificates wget git curl; do
+	if ! dpkg -l "$pkg" 2>/dev/null | grep -q "^ii"; then
+		MISSING_PKGS="$MISSING_PKGS $pkg"
+	fi
+done
+
+if [ -n "$MISSING_PKGS" ]; then
+	echo "Installing missing packages:$MISSING_PKGS"
+	sudo apt-get update -qq
+	sudo apt-get install -y $MISSING_PKGS
+else
+	echo "✓ All prerequisites already installed"
+fi
+
+# Step 2: Install clang-20
 echo ""
-echo "[2/4] Installing clang-19..."
-if ! command -v clang-cl-19 &> /dev/null; then
-    echo "Installing LLVM 19 from Ubuntu repositories..."
-    sudo apt-get install -y clang-19 lld-19
+echo "[2/4] Checking clang-20..."
+if ! command -v clang-cl-20 &> /dev/null; then
+    # Check if clang-20 packages are already installed
+    MISSING_CLANG=""
+    for pkg in clang-20 lld-20; do
+        if ! dpkg -l "$pkg" 2>/dev/null | grep -q "^ii"; then
+            MISSING_CLANG="$MISSING_CLANG $pkg"
+        fi
+    done
 
-    # Create clang-cl-19 symlink if needed
-    if [ ! -e /usr/bin/clang-cl-19 ]; then
-        sudo ln -s /usr/lib/llvm-19/bin/clang /usr/bin/clang-cl-19
+    if [ -n "$MISSING_CLANG" ]; then
+        echo "Installing LLVM 20 packages:$MISSING_CLANG"
+        sudo apt-get install -y $MISSING_CLANG
+    else
+        echo "✓ LLVM 20 packages already installed"
     fi
 
-    echo "✓ clang-19 installed: $(clang-cl-19 --version | head -1)"
+    # Create clang-cl-20 symlink if needed
+    if [ ! -e /usr/bin/clang-cl-20 ]; then
+        echo "Creating clang-cl-20 symlink..."
+        sudo ln -s /usr/lib/llvm-20/bin/clang /usr/bin/clang-cl-20
+    fi
+
+    echo "✓ clang-20 configured: $(clang-cl-20 --version | head -1)"
 else
-    echo "✓ clang-cl-19 already installed: $(clang-cl-19 --version | head -1)"
+    echo "✓ clang-cl-20 already installed: $(clang-cl-20 --version | head -1)"
 fi
 
 # Step 3: Download msvc-wine tool
@@ -99,16 +120,29 @@ fi
 # Verify Ghidra installation
 echo ""
 echo "Checking for Ghidra installation..."
+
+# Check if GHIDRA_INSTALL_DIR is set, otherwise try default location
+DEFAULT_GHIDRA="$HOME/tools/ghidra"
 if [ -z "$GHIDRA_INSTALL_DIR" ]; then
-    echo "⚠ Warning: GHIDRA_INSTALL_DIR not set"
-    echo "  You'll need to set this before running 'make ghidra-projects' or 'make test'"
-    echo "  Example: export GHIDRA_INSTALL_DIR=/path/to/ghidra"
+    # Not set - check default location
+    if [ -d "$DEFAULT_GHIDRA" ] && [ -f "$DEFAULT_GHIDRA/ghidraRun" ]; then
+        echo "✓ Ghidra found at default location: $DEFAULT_GHIDRA"
+        echo "  The Makefile will use this automatically"
+        echo "  Or set: export GHIDRA_INSTALL_DIR=$DEFAULT_GHIDRA"
+    else
+        echo "⚠ Warning: GHIDRA_INSTALL_DIR not set and Ghidra not found at default location"
+        echo "  Default location checked: $DEFAULT_GHIDRA"
+        echo "  To install Ghidra, run: ../setup.sh"
+        echo "  Or set manually: export GHIDRA_INSTALL_DIR=/path/to/ghidra"
+    fi
 else
-    if [ -d "$GHIDRA_INSTALL_DIR" ]; then
+    # GHIDRA_INSTALL_DIR is set - verify it exists
+    if [ -d "$GHIDRA_INSTALL_DIR" ] && [ -f "$GHIDRA_INSTALL_DIR/ghidraRun" ]; then
         echo "✓ Ghidra found at: $GHIDRA_INSTALL_DIR"
     else
-        echo "✗ ERROR: GHIDRA_INSTALL_DIR points to non-existent directory"
+        echo "✗ ERROR: GHIDRA_INSTALL_DIR points to invalid directory"
         echo "  $GHIDRA_INSTALL_DIR"
+        echo "  Expected to find: ghidraRun"
     fi
 fi
 

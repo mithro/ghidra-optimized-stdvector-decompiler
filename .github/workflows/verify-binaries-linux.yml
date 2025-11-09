@@ -1,0 +1,128 @@
+name: Verify Binaries (Linux)
+
+on:
+  pull_request:
+    paths:
+      - 'demo/**'
+  push:
+    paths:
+      - 'demo/**'
+  workflow_dispatch:
+
+jobs:
+  verify-linux:
+    name: Rebuild and verify binaries (Wine + MSVC)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Install prerequisites
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y python3 msitools ca-certificates wget git curl
+
+      - name: Backup committed binaries before rebuild
+        run: |
+          cd demo
+          for binary in out/clang-20/vector_extra_O2.exe out/clang-20/vector_extra_Od.exe; do
+            if [ -f "$binary" ]; then
+              cp "$binary" "$binary.committed"
+              echo "Backed up $binary to $binary.committed"
+              ls -lh "$binary.committed"
+            else
+              echo "ERROR: Committed binary not found: $binary"
+              exit 1
+            fi
+          done
+
+      - name: Setup MSVC toolchain and build binaries
+        run: |
+          cd demo
+          chmod +x setup_build_env.sh
+          # Auto-confirm setup (non-interactive for CI)
+          echo "y" | ./setup_build_env.sh
+          make extra
+        timeout-minutes: 45
+
+      - name: Setup Python and uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Compare rebuilt binaries to committed versions
+        run: |
+          export PATH="$HOME/.cargo/bin:$PATH"
+          cd demo
+
+          EXIT_CODE=0
+
+          for binary in out/clang-20/vector_extra_O2.exe out/clang-20/vector_extra_Od.exe; do
+            echo ""
+            echo "=========================================="
+            echo "Comparing $binary"
+            echo "=========================================="
+
+            # Verify the binary was rebuilt
+            if [ ! -f "$binary" ]; then
+              echo "ERROR: Failed to rebuild $binary"
+              EXIT_CODE=1
+              continue
+            fi
+
+            # Compare committed vs rebuilt
+            if uv run python scripts/compare_binaries.py \
+                "$binary.committed" \
+                "$binary"; then
+              echo "SUCCESS: $binary matches committed version"
+            else
+              COMPARE_EXIT=$?
+              if [ $COMPARE_EXIT -eq 1 ]; then
+                echo ""
+                echo "ERROR: $binary differs from committed version!"
+                EXIT_CODE=1
+              else
+                echo "ERROR: Comparison failed with exit code $COMPARE_EXIT"
+                EXIT_CODE=2
+              fi
+            fi
+          done
+
+          if [ $EXIT_CODE -ne 0 ]; then
+            echo ""
+            echo "============================================================"
+            echo "ERROR: Binary verification failed!"
+            echo "============================================================"
+            echo ""
+            echo "To update binaries:"
+            echo "  1. cd demo"
+            echo "  2. ./setup_build_env.sh"
+            echo "  3. make extra"
+            echo "  4. git add vector_extra_O2.exe vector_extra_Od.exe *.pdb"
+            echo "  5. git commit -m 'build: Update demo binaries'"
+            echo "============================================================"
+          fi
+
+          exit $EXIT_CODE
+
+      - name: Upload rebuilt binaries for inspection
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rebuilt-binaries-linux
+          path: |
+            demo/out/clang-20/vector_extra_O2.exe
+            demo/out/clang-20/vector_extra_Od.exe
+            demo/out/clang-20/*.pdb
+          retention-days: 7
+
+      - name: Upload build logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs-linux
+          path: demo/*.log
+          retention-days: 7
