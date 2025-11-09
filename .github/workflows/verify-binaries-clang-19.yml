@@ -30,16 +30,23 @@ jobs:
       - name: Backup committed binaries before rebuild
         run: |
           cd demo
+          BINARIES_EXIST=true
           for binary in out/clang-19/vector_extra_O2.exe out/clang-19/vector_extra_Od.exe; do
             if [ -f "$binary" ]; then
               cp "$binary" "$binary.committed"
-              echo "Backed up $binary to $binary.committed"
-              ls -lh "$binary.committed"
+              echo "Backed up $binary ($(stat -c%s $binary) bytes)"
             else
-              echo "ERROR: Committed binary not found: $binary"
-              exit 1
+              echo "WARNING: Committed binary not found: $binary (will build fresh)"
+              BINARIES_EXIST=false
             fi
           done
+
+          if [ "$BINARIES_EXIST" = "false" ]; then
+            echo "BINARIES_EXIST=false" >> $GITHUB_ENV
+            echo "No existing binaries - will build and upload for initial commit"
+          else
+            echo "BINARIES_EXIST=true" >> $GITHUB_ENV
+          fi
 
       - name: Setup MSVC toolchain and build binaries
         run: |
@@ -59,6 +66,36 @@ jobs:
         run: |
           export PATH="$HOME/.cargo/bin:$PATH"
           cd demo
+
+          # Skip comparison if no binaries existed before (first build)
+          if [ "$BINARIES_EXIST" = "false" ]; then
+            echo "============================================================"
+            echo "First build - no comparison needed"
+            echo "============================================================"
+            echo ""
+            echo "Built binaries:"
+            for binary in out/clang-19/vector_extra_O2.exe out/clang-19/vector_extra_Od.exe; do
+              if [ -f "$binary" ]; then
+                ls -lh "$binary"
+              else
+                echo "ERROR: Failed to build $binary"
+                exit 1
+              fi
+            done
+            echo ""
+            echo "Download the 'rebuilt-binaries-clang-19' artifact and commit:"
+            echo "  1. Download artifact from this workflow run"
+            echo "  2. cd demo/out"
+            echo "  3. Copy downloaded files to clang-19/"
+            echo "  4. git add clang-19/*.exe clang-19/*.pdb"
+            echo "  5. git commit -m 'build: Add clang-19 demo binaries'"
+            echo "  6. git push"
+            echo "  7. cd ../.."
+            echo "  8. git add demo/out"
+            echo "  9. git commit -m 'chore: Update submodule with clang-19 binaries'"
+            echo " 10. git push"
+            exit 0
+          fi
 
           EXIT_CODE=0
 
