@@ -5,8 +5,6 @@
 # Override these by setting environment variables or passing to make
 GHIDRA_INSTALL_DIR ?= $(HOME)/tools/ghidra
 MSVC_DIR ?= $(HOME)/.msvc
-CLANG_CL ?= clang-cl-20
-LLD_LINK ?= lld-link-20
 
 # Compiler identification for output directory
 COMPILER ?= clang-19
@@ -20,7 +18,12 @@ ifneq (,$(findstring msvc-,$(COMPILER)))
   LINKER := link.exe
 else
   # clang-cl mode (cross-compilation)
+  # Derive clang-cl and lld-link versions from COMPILER variable
+  # COMPILER=clang-19 → clang-cl-19, lld-link-19
+  # COMPILER=clang-20 → clang-cl-20, lld-link-20
   USE_NATIVE_MSVC := 0
+  CLANG_CL ?= clang-cl-$(subst clang-,,$(COMPILER))
+  LLD_LINK ?= lld-link-$(subst clang-,,$(COMPILER))
   CXX := $(CLANG_CL)
   LINKER := $(LLD_LINK)
 endif
