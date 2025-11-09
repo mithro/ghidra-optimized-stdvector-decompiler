@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Verify OptimizedVectorDecompiler extension works correctly.
 
@@ -30,6 +31,13 @@ import os
 import subprocess
 import tempfile
 
+# Conditional import for pathlib (not available in Jython)
+try:
+    from pathlib import Path
+    HAS_PATHLIB = True
+except ImportError:
+    HAS_PATHLIB = False
+
 # Expected minimum pattern counts in vector_extra_O2.exe
 EXPECTED_PATTERNS = {
     'SIZE': 5,      # vec->size() transformations
@@ -37,6 +45,26 @@ EXPECTED_PATTERNS = {
     'CAPACITY': 7,  # vec->capacity() transformations
     'DATA': 2,      # vec->data() transformations
 }
+
+def discover_compilers(demo_dir="demo"):
+    """Discover all compiler directories in demo/out/"""
+    out_dir = os.path.join(demo_dir, "out")
+
+    if not os.path.exists(out_dir):
+        print("ERROR: %s does not exist" % out_dir)
+        print("Run: git submodule update --init")
+        return []
+
+    compilers = []
+    try:
+        for item in os.listdir(out_dir):
+            item_path = os.path.join(out_dir, item)
+            if os.path.isdir(item_path) and not item.startswith('.'):
+                compilers.append(item)
+    except OSError:
+        pass
+
+    return sorted(compilers)
 
 def run_analysis_in_ghidra():
     """Run analysis when executed as Ghidra script."""
@@ -116,7 +144,7 @@ def run_analysis_in_ghidra():
     all_passed = True
     for pattern_name, expected_count in EXPECTED_PATTERNS.items():
         actual = transformations.get(pattern_name, 0)
-        status = "✓" if actual >= expected_count else "✗"
+        status = "PASS" if actual >= expected_count else "FAIL"
         print("  %s %s: expected >=%d, found %d" % (status, pattern_name, expected_count, actual))
         if actual < expected_count:
             all_passed = False
@@ -127,12 +155,12 @@ def run_analysis_in_ghidra():
 
     if all_passed:
         print("=" * 80)
-        print("✓ ALL TESTS PASSED")
+        print("ALL TESTS PASSED")
         print("=" * 80)
         return 0
     else:
         print("=" * 80)
-        print("✗ SOME TESTS FAILED")
+        print("SOME TESTS FAILED")
         print("=" * 80)
         print("")
         print("Possible causes:")
@@ -140,6 +168,83 @@ def run_analysis_in_ghidra():
         print("  - Extension JAR not in $GHIDRA_INSTALL_DIR/Ghidra/Features/Decompiler/lib/")
         print("  - Analyzing wrong binary (use vector_extra_O2.exe, not _Od)")
         return 1
+
+def test_compiler(compiler, demo_dir="demo"):
+    """Test binaries for a specific compiler"""
+    binary_path = os.path.join(demo_dir, "out", compiler, "vector_extra_O2.exe")
+
+    if not os.path.exists(binary_path):
+        print("  WARNING: Skipping %s: vector_extra_O2.exe not found" % compiler)
+        return None
+
+    print("\nTesting %s/vector_extra_O2.exe..." % compiler)
+    print("  Binary path: %s" % binary_path)
+
+    # Find Ghidra installation
+    ghidra_dir = os.environ.get('GHIDRA_INSTALL_DIR')
+    if not ghidra_dir:
+        print("  ERROR: GHIDRA_INSTALL_DIR not set")
+        print("  Set it with: export GHIDRA_INSTALL_DIR=/path/to/ghidra")
+        return False
+
+    if not os.path.isdir(ghidra_dir):
+        print("  ERROR: GHIDRA_INSTALL_DIR does not exist: %s" % ghidra_dir)
+        return False
+
+    analyze_headless = os.path.join(ghidra_dir, 'support', 'analyzeHeadless')
+    if not os.path.exists(analyze_headless):
+        print("  ERROR: analyzeHeadless not found at: %s" % analyze_headless)
+        return False
+
+    # Create temporary project directory
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    temp_dir = os.path.join(script_dir, '.tmp_test_%s' % compiler)
+
+    try:
+        os.makedirs(temp_dir, exist_ok=True)
+        project_name = "VectorTestProject_%s" % compiler
+
+        # Run Ghidra headless with this script as postScript
+        cmd = [
+            analyze_headless,
+            temp_dir,
+            project_name,
+            '-import', binary_path,
+            '-postScript', __file__,
+            '-deleteProject'  # Clean up after
+        ]
+
+        print("  Running Ghidra analysis...")
+        result = subprocess.run(cmd, check=False, capture_output=True, text=True)
+        print("  Analysis complete (exit code: %d)" % result.returncode)
+
+        # Clean up temp directory
+        import shutil
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
+        # Parse output to determine pass/fail
+        # Look for "ALL TESTS PASSED" in the output
+        output = result.stdout + result.stderr
+        if "ALL TESTS PASSED" in output:
+            return True
+        elif "SOME TESTS FAILED" in output:
+            return False
+        else:
+            # If we can't determine, print some output for debugging
+            print("  WARNING: Could not determine test result from output")
+            print("  Last 50 lines of output:")
+            for line in output.split('\n')[-50:]:
+                if line.strip():
+                    print("    %s" % line)
+            return False
+
+    except Exception as e:
+        print("  ERROR running Ghidra: %s" % str(e))
+        # Clean up temp directory on error
+        import shutil
+        if os.path.exists(temp_dir):
+            shutil.rmtree(temp_dir, ignore_errors=True)
+        return False
 
 def run_via_ghidra_headless():
     """Run test by invoking Ghidra in headless mode."""
@@ -151,17 +256,17 @@ def run_via_ghidra_headless():
     # Find Ghidra installation
     ghidra_dir = os.environ.get('GHIDRA_INSTALL_DIR')
     if not ghidra_dir:
-        print("✗ ERROR: GHIDRA_INSTALL_DIR not set")
+        print("ERROR: GHIDRA_INSTALL_DIR not set")
         print("  Set it with: export GHIDRA_INSTALL_DIR=/path/to/ghidra")
         return 1
 
     if not os.path.isdir(ghidra_dir):
-        print("✗ ERROR: GHIDRA_INSTALL_DIR does not exist: %s" % ghidra_dir)
+        print("ERROR: GHIDRA_INSTALL_DIR does not exist: %s" % ghidra_dir)
         return 1
 
     analyze_headless = os.path.join(ghidra_dir, 'support', 'analyzeHeadless')
     if not os.path.exists(analyze_headless):
-        print("✗ ERROR: analyzeHeadless not found at: %s" % analyze_headless)
+        print("ERROR: analyzeHeadless not found at: %s" % analyze_headless)
         return 1
 
     # Find demo binary
@@ -169,12 +274,12 @@ def run_via_ghidra_headless():
     demo_binary = os.path.join(script_dir, 'demo', 'vector_extra_O2.exe')
 
     if not os.path.exists(demo_binary):
-        print("✗ ERROR: Demo binary not found: %s" % demo_binary)
+        print("ERROR: Demo binary not found: %s" % demo_binary)
         print("  Build it with: cd demo && make extra")
         return 1
 
-    print("✓ Found Ghidra: %s" % ghidra_dir)
-    print("✓ Found demo binary: %s" % demo_binary)
+    print("Found Ghidra: %s" % ghidra_dir)
+    print("Found demo binary: %s" % demo_binary)
     print("")
     print("Running Ghidra headless analysis...")
     print("-" * 80)
@@ -197,7 +302,7 @@ def run_via_ghidra_headless():
             result = subprocess.run(cmd, check=False, capture_output=False)
             return result.returncode
         except Exception as e:
-            print("✗ ERROR running Ghidra: %s" % str(e))
+            print("ERROR running Ghidra: %s" % str(e))
             return 1
 
 def main():
@@ -209,9 +314,43 @@ def main():
         if exit_code != 0:
             raise Exception("Tests failed")
     else:
-        # Invoke Ghidra headless
-        exit_code = run_via_ghidra_headless()
-        sys.exit(exit_code)
+        # Multi-compiler validation mode
+        compilers = discover_compilers()
+
+        if not compilers:
+            print("ERROR: No compilers found in demo/out/")
+            print("Run: git submodule update --init")
+            return 1
+
+        print("=" * 80)
+        print("Vector Simplification Extension Test - Multi-Compiler Mode")
+        print("=" * 80)
+        print("")
+        print("Found %d compiler(s): %s" % (len(compilers), ', '.join(compilers)))
+
+        results = {}
+        for compiler in compilers:
+            result = test_compiler(compiler)
+            if result is not None:
+                results[compiler] = result
+
+        # Print summary
+        print("")
+        print("=" * 80)
+        print("SUMMARY")
+        print("=" * 80)
+
+        passed = sum(1 for r in results.values() if r)
+        total = len(results)
+
+        for compiler, result in sorted(results.items()):
+            status = "PASS" if result else "FAIL"
+            print("  %s: %s" % (status, compiler))
+
+        print("")
+        print("Result: %d/%d compilers passed" % (passed, total))
+
+        return 0 if passed == total else 1
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())
