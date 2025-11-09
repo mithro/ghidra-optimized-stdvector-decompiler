@@ -328,6 +328,18 @@ def main():
             raise Exception("Tests failed")
     else:
         # Multi-compiler validation mode
+
+        # Check GHIDRA_INSTALL_DIR early to avoid repeating error for each compiler
+        ghidra_dir = os.environ.get('GHIDRA_INSTALL_DIR')
+        if not ghidra_dir:
+            print("✗ ERROR: GHIDRA_INSTALL_DIR not set")
+            print("  Set it with: export GHIDRA_INSTALL_DIR=/path/to/ghidra")
+            return 1
+
+        if not os.path.isdir(ghidra_dir):
+            print("✗ ERROR: GHIDRA_INSTALL_DIR does not exist: %s" % ghidra_dir)
+            return 1
+
         compilers = discover_compilers()
 
         if not compilers:
