@@ -25,7 +25,7 @@ jobs:
       - name: Install build tools
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y python3 msitools ca-certificates wget git curl
+          sudo apt-get install -y python3 msitools ca-certificates wget git curl clang-20 lld-20
 
       - name: Backup committed binaries before rebuild
         run: |
