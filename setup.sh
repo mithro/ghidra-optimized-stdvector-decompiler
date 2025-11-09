@@ -132,10 +132,20 @@ SYSTEM_EXT_DIR="$GHIDRA_INSTALL_DIR/Extensions/Ghidra"
 DECOMPILER_LIB="$GHIDRA_INSTALL_DIR/Ghidra/Features/Decompiler/lib"
 
 if [ "$SKIP_BUILD" = true ]; then
-    # Skip build mode: Install JAR directly (JAR_FILE already set in Step 4)
-    print_info "Installing JAR to system extensions..."
-    mkdir -p "$SYSTEM_EXT_DIR"
-    cp "$JAR_FILE" "$SYSTEM_EXT_DIR/"
+    # Skip build mode: Create extension directory structure manually
+    print_info "Creating extension directory structure..."
+    EXT_INSTALL_DIR="$SYSTEM_EXT_DIR/OptimizedVectorDecompiler"
+    mkdir -p "$EXT_INSTALL_DIR/lib"
+
+    # Copy JAR to extension lib directory
+    cp "$JAR_FILE" "$EXT_INSTALL_DIR/lib/"
+
+    # Copy extension.properties
+    if [ -f "$EXTENSION_DIR/extension.properties" ]; then
+        cp "$EXTENSION_DIR/extension.properties" "$EXT_INSTALL_DIR/"
+    else
+        print_warning "extension.properties not found"
+    fi
 
     # Also copy to Decompiler lib for headless mode
     if [ -d "$DECOMPILER_LIB" ]; then
