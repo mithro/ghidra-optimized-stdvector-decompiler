@@ -94,12 +94,13 @@ print_status "User directories created"
 echo ""
 EXTENSION_DIR="$SCRIPT_DIR/extension"
 
+JAR_FILE="$EXTENSION_DIR/build/libs/OptimizedVectorDecompiler.jar"
+
 if [ "$SKIP_BUILD" = true ]; then
     echo -e "${BLUE}Step 4: Skipping build (--skip-build specified)...${NC}"
     print_info "Using pre-built extension JAR"
 
     # Verify JAR exists
-    JAR_FILE="$EXTENSION_DIR/build/libs/OptimizedVectorDecompiler.jar"
     if [ ! -f "$JAR_FILE" ]; then
         print_error "Pre-built JAR not found at: $JAR_FILE"
         print_info "Remove --skip-build to build from source"
@@ -127,12 +128,11 @@ fi
 echo ""
 echo -e "${BLUE}Step 5: Installing extension...${NC}"
 
-JAR_FILE="$EXTENSION_DIR/build/libs/OptimizedVectorDecompiler.jar"
 SYSTEM_EXT_DIR="$GHIDRA_INSTALL_DIR/Extensions/Ghidra"
 DECOMPILER_LIB="$GHIDRA_INSTALL_DIR/Ghidra/Features/Decompiler/lib"
 
 if [ "$SKIP_BUILD" = true ]; then
-    # Skip build mode: Install JAR directly
+    # Skip build mode: Install JAR directly (JAR_FILE already set in Step 4)
     print_info "Installing JAR to system extensions..."
     mkdir -p "$SYSTEM_EXT_DIR"
     cp "$JAR_FILE" "$SYSTEM_EXT_DIR/"
@@ -160,7 +160,7 @@ else
     print_info "Extracting to system extensions directory..."
     unzip -q -o "$DIST_FILE" -d "$SYSTEM_EXT_DIR/"
 
-    # Also copy JAR to Decompiler lib for headless mode
+    # Also copy JAR to Decompiler lib for headless mode (JAR_FILE already set in Step 4)
     if [ -f "$JAR_FILE" ]; then
         if [ -d "$DECOMPILER_LIB" ]; then
             print_info "Installing JAR for headless mode..."
