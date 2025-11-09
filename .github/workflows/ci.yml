@@ -86,6 +86,27 @@ jobs:
           mkdir -p "$GHIDRA_INSTALL_DIR/Ghidra/Features/Decompiler/lib"
           cp extension/build/libs/*.jar "$GHIDRA_INSTALL_DIR/Ghidra/Features/Decompiler/lib/"
 
+      - name: Enable extension for headless mode
+        run: |
+          # Determine Ghidra version for user directory
+          GHIDRA_VERSION="${{ matrix.ghidra-version }}"
+          GHIDRA_USER_DIR="$HOME/.ghidra/.ghidra_${GHIDRA_VERSION}_PUBLIC"
+          PREFS_DIR="$GHIDRA_USER_DIR/preferences"
+          mkdir -p "$PREFS_DIR"
+
+          # Create ExtensionProvider preferences file
+          cat > "$PREFS_DIR/ExtensionProvider" <<'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <FILE_INFO>
+              <BASIC_INFO>
+                  <STATE NAME="Extension States" TYPE="string" VALUE="OptimizedVectorDecompiler:true;" />
+              </BASIC_INFO>
+          </FILE_INFO>
+          EOF
+
+          echo "Extension enabled for Ghidra $GHIDRA_VERSION"
+          echo "Preferences file: $PREFS_DIR/ExtensionProvider"
+
       - name: Setup Python and uv
         run: |
           curl -LsSf https://astral.sh/uv/install.sh | sh
