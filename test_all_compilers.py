@@ -111,19 +111,85 @@ def test_compiler(compiler, ghidra_dir, demo_dir="demo"):
         return False
 
 
+def find_ghidra_installation():
+    """Find Ghidra installation directory.
+
+    Returns path if found, None otherwise.
+    """
+    # Check environment variable first
+    if 'GHIDRA_INSTALL_DIR' in os.environ:
+        ghidra_dir = os.environ['GHIDRA_INSTALL_DIR']
+        if os.path.isdir(ghidra_dir) and os.path.isfile(os.path.join(ghidra_dir, 'ghidraRun')):
+            return ghidra_dir
+        print("WARNING: GHIDRA_INSTALL_DIR is set but doesn't contain a valid Ghidra installation")
+        print("  Path: %s" % ghidra_dir)
+        return None
+
+    # Try default location
+    default_path = os.path.join(os.path.expanduser('~'), 'tools', 'ghidra')
+    if os.path.isdir(default_path) and os.path.isfile(os.path.join(default_path, 'ghidraRun')):
+        return default_path
+
+    return None
+
+
+def verify_extension_installed(ghidra_dir):
+    """Verify that the OptimizedVectorDecompiler extension is built and installed.
+
+    Returns True if extension is ready, False otherwise.
+    """
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+
+    # Check if extension JAR is built
+    jar_path = os.path.join(script_dir, "extension", "build", "libs", "OptimizedVectorDecompiler.jar")
+    if not os.path.exists(jar_path):
+        print("✗ ERROR: Extension JAR not built")
+        print("  Expected: %s" % jar_path)
+        print("")
+        print("Please build the extension:")
+        print("  cd extension && ./build.sh")
+        print("  Or run: ./setup.sh")
+        print("")
+        return False
+
+    # Check if extension is installed in Ghidra's Decompiler lib (required for headless mode)
+    decompiler_jar = os.path.join(ghidra_dir, "Ghidra", "Features", "Decompiler", "lib", "OptimizedVectorDecompiler.jar")
+    if not os.path.exists(decompiler_jar):
+        print("✗ ERROR: Extension not installed in Ghidra")
+        print("  Expected: %s" % decompiler_jar)
+        print("")
+        print("Please install the extension:")
+        print("  ./setup.sh")
+        print("")
+        return False
+
+    print("✓ Extension verified: %s" % os.path.basename(jar_path))
+    return True
+
+
 def main():
     """Main entry point."""
 
-    # Check GHIDRA_INSTALL_DIR early to avoid repeating error for each compiler
-    ghidra_dir = os.environ.get('GHIDRA_INSTALL_DIR')
+    # Find Ghidra installation
+    ghidra_dir = find_ghidra_installation()
     if not ghidra_dir:
-        print("✗ ERROR: GHIDRA_INSTALL_DIR not set")
-        print("  Set it with: export GHIDRA_INSTALL_DIR=/path/to/ghidra")
+        print("✗ ERROR: Ghidra installation not found")
+        print("")
+        print("Please either:")
+        print("  1. Set GHIDRA_INSTALL_DIR environment variable:")
+        print("     export GHIDRA_INSTALL_DIR=/path/to/ghidra")
+        print("  2. Install Ghidra to default location: ~/tools/ghidra")
+        print("  3. Run ./setup.sh to install Ghidra automatically")
+        print("")
         return 1
 
-    if not os.path.isdir(ghidra_dir):
-        print("✗ ERROR: GHIDRA_INSTALL_DIR does not exist: %s" % ghidra_dir)
+    print("✓ Ghidra found: %s" % ghidra_dir)
+
+    # Verify extension is built and installed
+    if not verify_extension_installed(ghidra_dir):
         return 1
+
+    print("")
 
     compilers = discover_compilers()
 
