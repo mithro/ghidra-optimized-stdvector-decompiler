@@ -21,7 +21,7 @@
 Run:
 ```bash
 cd demo
-git submodule add git@github.com:mithro/ghidra-optimized-stdvector-decompiler-demo-out.git out
+git submodule add https://github.com/mithro/ghidra-optimized-stdvector-decompiler-demo-out.git out
 ```
 
 Expected output: `Cloning into 'demo/out'...` and submodule created
