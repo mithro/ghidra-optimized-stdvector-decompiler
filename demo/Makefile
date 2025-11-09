@@ -68,17 +68,27 @@ debug: $(BINARIES_Od)
 basic: vector_basic_O2.exe vector_basic_Od.exe
 extra: vector_extra_O2.exe vector_extra_Od.exe
 
+# Initialize submodule if not already done
+.PHONY: init-submodule
+init-submodule:
+	@if [ ! -f out/.git ]; then \
+		echo "Initializing submodule..."; \
+		git submodule update --init demo/out; \
+	fi
+
 # Pattern rules for building binaries
-%_O2.exe: %.cpp
-	@echo "Building optimized binary: $@"
+%_O2.exe: %.cpp init-submodule
+	@echo "Building optimized binary: $@ with $(COMPILER)"
+	@mkdir -p $(OUT_DIR)
 	$(CLANG_CL) $(CXXFLAGS_COMMON) $(CXXFLAGS_O2) \
-		/Fe:$@ $< \
+		/Fe:$(OUT_DIR)/$@ $< \
 		/link $(LINKFLAGS) $(LINKFLAGS_O2)
 
-%_Od.exe: %.cpp
-	@echo "Building debug binary: $@"
+%_Od.exe: %.cpp init-submodule
+	@echo "Building debug binary: $@ with $(COMPILER)"
+	@mkdir -p $(OUT_DIR)
 	$(CLANG_CL) $(CXXFLAGS_COMMON) $(CXXFLAGS_Od) \
-		/Fe:$@ $< \
+		/Fe:$(OUT_DIR)/$@ $< \
 		/link $(LINKFLAGS) $(LINKFLAGS_Od)
 
 # Generate Ghidra projects for all binaries
