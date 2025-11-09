@@ -1,5 +1,5 @@
 # Makefile for building MSVC-compatible vector demo binaries
-# Uses clang-cl with MSVC headers/SDK
+# Supports both clang-cl (cross-compilation) and native MSVC (cl.exe)
 
 # Environment configuration
 # Override these by setting environment variables or passing to make
@@ -12,7 +12,20 @@ LLD_LINK ?= lld-link-20
 COMPILER ?= clang-19
 OUT_DIR = out/$(COMPILER)
 
-# MSVC paths (auto-detected from MSVC_DIR)
+# Detect if using native MSVC (cl.exe) vs clang-cl
+ifneq (,$(findstring msvc-,$(COMPILER)))
+  # Native MSVC mode
+  USE_NATIVE_MSVC := 1
+  CXX := cl.exe
+  LINKER := link.exe
+else
+  # clang-cl mode (cross-compilation)
+  USE_NATIVE_MSVC := 0
+  CXX := $(CLANG_CL)
+  LINKER := $(LLD_LINK)
+endif
+
+# MSVC paths (for clang-cl or native MSVC on non-Windows)
 MSVC_VERSION := 14.44.35207
 SDK_VERSION := 10.0.26100.0
 MSVC_INCLUDE := $(MSVC_DIR)/VC/Tools/MSVC/$(MSVC_VERSION)/include
@@ -20,22 +33,36 @@ SDK_INCLUDE := $(MSVC_DIR)/Windows Kits/10/Include/$(SDK_VERSION)
 MSVC_LIB := $(MSVC_DIR)/VC/Tools/MSVC/$(MSVC_VERSION)/lib/x64
 SDK_LIB := $(MSVC_DIR)/Windows Kits/10/Lib/$(SDK_VERSION)
 
-# Compiler flags
-CXXFLAGS_COMMON := /std:c++17 /EHsc /MD -fuse-ld=$(LLD_LINK) \
+# Compiler flags (common to both)
+CXXFLAGS_BASE := /std:c++17 /EHsc /MD
+CXXFLAGS_O2 := /O2 /Zi
+CXXFLAGS_Od := /Od /Zi
+
+# Compiler-specific flags
+ifeq ($(USE_NATIVE_MSVC),1)
+  # Native MSVC: Use system headers, no custom includes needed on Windows
+  CXXFLAGS_COMMON := $(CXXFLAGS_BASE)
+
+  # Native MSVC link flags
+  LINKFLAGS := /DEBUG:FULL \
+	/stub:$(CURDIR)/build_setup/dosstub.exe \
+	/Brepro
+else
+  # clang-cl: Need explicit MSVC header paths for cross-compilation
+  CXXFLAGS_COMMON := $(CXXFLAGS_BASE) -fuse-ld=$(LLD_LINK) \
 	-I"$(MSVC_INCLUDE)" \
 	-I"$(SDK_INCLUDE)/ucrt" \
 	-I"$(SDK_INCLUDE)/um" \
 	-I"$(SDK_INCLUDE)/shared"
 
-CXXFLAGS_O2 := /O2 /Zi
-CXXFLAGS_Od := /Od /Zi
-
-LINKFLAGS := /LIBPATH:"$(MSVC_LIB)" \
+  # clang-cl link flags
+  LINKFLAGS := /LIBPATH:"$(MSVC_LIB)" \
 	/LIBPATH:"$(SDK_LIB)/ucrt/x64" \
 	/LIBPATH:"$(SDK_LIB)/um/x64" \
 	/DEBUG:FULL \
 	/stub:$(CURDIR)/build_setup/dosstub.exe \
 	/Brepro
+endif
 
 LINKFLAGS_O2 := /OPT:REF /OPT:ICF
 LINKFLAGS_Od := /OPT:NOREF /OPT:NOICF
@@ -80,16 +107,16 @@ init-submodule:
 
 # Pattern rules for building binaries
 $(OUT_DIR)/%_O2.exe: %.cpp | init-submodule
-	@echo "Building optimized binary: $@ with $(COMPILER)"
+	@echo "Building optimized binary: $@ with $(COMPILER) ($(CXX))"
 	@mkdir -p $(OUT_DIR)
-	$(CLANG_CL) $(CXXFLAGS_COMMON) $(CXXFLAGS_O2) \
+	$(CXX) $(CXXFLAGS_COMMON) $(CXXFLAGS_O2) \
 		/Fe:$@ $< \
 		/link $(LINKFLAGS) $(LINKFLAGS_O2)
 
 $(OUT_DIR)/%_Od.exe: %.cpp | init-submodule
-	@echo "Building debug binary: $@ with $(COMPILER)"
+	@echo "Building debug binary: $@ with $(COMPILER) ($(CXX))"
 	@mkdir -p $(OUT_DIR)
-	$(CLANG_CL) $(CXXFLAGS_COMMON) $(CXXFLAGS_Od) \
+	$(CXX) $(CXXFLAGS_COMMON) $(CXXFLAGS_Od) \
 		/Fe:$@ $< \
 		/link $(LINKFLAGS) $(LINKFLAGS_Od)
 
