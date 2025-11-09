@@ -34,15 +34,23 @@ jobs:
         shell: bash
         run: |
           cd demo
+          BINARIES_EXIST=true
           for binary in out/msvc-14.44/vector_extra_O2.exe out/msvc-14.44/vector_extra_Od.exe; do
             if [ -f "$binary" ]; then
               cp "$binary" "$binary.committed"
               echo "Backed up $binary ($(stat -c%s $binary) bytes)"
             else
-              echo "ERROR: Committed binary not found: $binary"
-              exit 1
+              echo "WARNING: Committed binary not found: $binary (will build fresh)"
+              BINARIES_EXIST=false
             fi
           done
+
+          if [ "$BINARIES_EXIST" = "false" ]; then
+            echo "BINARIES_EXIST=false" >> $GITHUB_ENV
+            echo "No existing binaries - will build and upload for initial commit"
+          else
+            echo "BINARIES_EXIST=true" >> $GITHUB_ENV
+          fi
 
       - name: Build binaries with native MSVC
         shell: bash
@@ -63,6 +71,7 @@ jobs:
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
       - name: Compare rebuilt binaries to committed versions
+        if: env.BINARIES_EXIST == 'true'
         shell: bash
         run: |
           export PATH="$HOME/.cargo/bin:$PATH"
@@ -116,6 +125,26 @@ jobs:
           fi
 
           exit $EXIT_CODE
+
+      - name: Display instructions for committing new binaries
+        if: env.BINARIES_EXIST == 'false'
+        shell: bash
+        run: |
+          echo ""
+          echo "============================================================"
+          echo "New MSVC binaries have been built!"
+          echo "============================================================"
+          echo ""
+          echo "Download the artifact 'rebuilt-binaries-msvc-14.44' from this"
+          echo "workflow run and commit the binaries to the submodule:"
+          echo ""
+          echo "  1. Download artifact from GitHub Actions"
+          echo "  2. cd demo/out"
+          echo "  3. Extract binaries to msvc-14.44/"
+          echo "  4. git add msvc-14.44/*.exe msvc-14.44/*.pdb"
+          echo "  5. git commit -m 'build: Add msvc-14.44 demo binaries'"
+          echo "  6. git push"
+          echo "============================================================"
 
       - name: Upload rebuilt binaries for inspection
         if: always()
