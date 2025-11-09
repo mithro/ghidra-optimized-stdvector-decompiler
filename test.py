@@ -22,9 +22,11 @@ try:
     # Running in Ghidra - use Ghidra API
     from vectorsimplify import VectorSimplifyingDecompiler
     RUNNING_IN_GHIDRA = True
-except ImportError:
+    print("DEBUG: Successfully imported VectorSimplifyingDecompiler")
+except ImportError as e:
     # Running standalone - need to invoke Ghidra headless
     RUNNING_IN_GHIDRA = False
+    print("DEBUG: Not running in Ghidra (ImportError: %s)" % str(e))
 
 import sys
 import os
@@ -71,6 +73,8 @@ def run_analysis_in_ghidra():
     print("=" * 80)
     print("Vector Simplification Extension Test")
     print("=" * 80)
+    print("DEBUG: run_analysis_in_ghidra() called")
+    print("DEBUG: RUNNING_IN_GHIDRA = %s" % RUNNING_IN_GHIDRA)
     print("")
 
     # Use the custom decompiler with pattern detection
@@ -225,6 +229,15 @@ def test_compiler(compiler, demo_dir="demo"):
         # Parse output to determine pass/fail
         # Look for "ALL TESTS PASSED" in the output
         output = result.stdout + result.stderr
+
+        # DEBUG: Always print output to diagnose CI issues
+        if os.environ.get('CI') or os.environ.get('DEBUG_TEST'):
+            print("  ===== FULL GHIDRA OUTPUT (last 100 lines) =====")
+            for line in output.split('\n')[-100:]:
+                if line.strip():
+                    print("  %s" % line)
+            print("  ===== END GHIDRA OUTPUT =====")
+
         if "ALL TESTS PASSED" in output:
             return True
         elif "SOME TESTS FAILED" in output:
