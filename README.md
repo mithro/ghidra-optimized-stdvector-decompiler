@@ -62,10 +62,15 @@ This plugin automatically detects and transforms these optimized patterns back i
 
 ### Installation
 
-1. **Clone this repository:**
+1. **Clone this repository with submodules:**
    ```bash
-   git clone https://github.com/YOUR_USERNAME/ghidra-optimized-stdvector-decompiler.git
+   git clone --recurse-submodules https://github.com/YOUR_USERNAME/ghidra-optimized-stdvector-decompiler.git
    cd ghidra-optimized-stdvector-decompiler
+   ```
+
+   If already cloned without submodules:
+   ```bash
+   git submodule update --init
    ```
 
 2. **Run the setup script:**
