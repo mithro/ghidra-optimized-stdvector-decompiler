@@ -167,7 +167,15 @@ test: vector_extra_O2.exe
 .PHONY: clean
 clean:
 	@echo "Cleaning build artifacts..."
-	rm -f *.exe *.pdb *.obj *.ilk *.exp *.lib
+	rm -f *.obj *.ilk *.exp *.lib
+	@echo "Note: Binaries are in out/$(COMPILER)/ - use 'make clean-binaries' to remove"
+	@echo "Cleaned."
+
+# Clean binaries for current compiler
+.PHONY: clean-binaries
+clean-binaries:
+	@echo "Cleaning binaries for $(COMPILER)..."
+	rm -f $(OUT_DIR)/*.exe $(OUT_DIR)/*.pdb
 	@echo "Cleaned."
 
 # Clean Ghidra projects (keep binaries)
@@ -210,3 +218,13 @@ help:
 	@echo "  1. Run: ./setup_build_env.sh"
 	@echo "  2. Run: make check-env"
 	@echo "  3. Run: make"
+
+# List available compiler directories
+.PHONY: list-compilers
+list-compilers:
+	@echo "Available compilers in out/:"
+	@if [ -d out ]; then \
+		ls -d out/*/ 2>/dev/null | sed 's|out/||' | sed 's|/||' || echo "  (none found)"; \
+	else \
+		echo "  Submodule not initialized. Run: git submodule update --init"; \
+	fi
