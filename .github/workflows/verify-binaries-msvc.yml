@@ -36,8 +36,9 @@ jobs:
           cd demo
           for binary in out/msvc-14.44/vector_extra_O2.exe out/msvc-14.44/vector_extra_Od.exe; do
             if [ -f "$binary" ]; then
-              cp "$binary" "$binary.committed"
-              echo "Backed up $binary ($(stat -c%s $binary) bytes)"
+              mv "$binary" "$binary.committed"
+              echo "Moved $binary to $binary.committed"
+              ls -lh "$binary.committed"
             else
               echo "ERROR: Committed binary not found: $binary"
               exit 1
