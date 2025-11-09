@@ -1,3 +1,3 @@
 [submodule "demo/out"]
 	path = demo/out
-	url = git@github.com:mithro/ghidra-optimized-stdvector-decompiler-demo-out.git
+	url = https://github.com/mithro/ghidra-optimized-stdvector-decompiler-demo-out.git
