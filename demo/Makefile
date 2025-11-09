@@ -8,6 +8,10 @@ MSVC_DIR ?= $(HOME)/.msvc
 CLANG_CL ?= clang-cl-19
 LLD_LINK ?= lld-link
 
+# Compiler identification for output directory
+COMPILER ?= clang-19
+OUT_DIR = out/$(COMPILER)
+
 # MSVC paths (auto-detected from MSVC_DIR)
 MSVC_VERSION := 14.44.35207
 SDK_VERSION := 10.0.26100.0
