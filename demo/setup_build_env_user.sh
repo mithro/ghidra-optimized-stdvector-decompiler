@@ -40,12 +40,6 @@ if [ -n "$MISSING" ]; then
     exit 1
 fi
 
-if ! command -v clang-cl-20 &> /dev/null; then
-    echo "✗ ERROR: clang-cl-20 not found"
-    echo "  Please run setup_build_env_root.sh first to install clang-20"
-    exit 1
-fi
-
 echo "✓ Prerequisites verified"
 
 # Step 1: Download msvc-wine tool
@@ -127,7 +121,6 @@ echo "Setup Complete!"
 echo "========================================================================="
 echo ""
 echo "Environment configured:"
-echo "  ✓ clang-cl-20 available"
 echo "  ✓ MSVC 14.44 headers"
 echo "  ✓ Windows SDK 10.0.26100"
 echo "  ✓ Toolchain location: $MSVC_DIR"
