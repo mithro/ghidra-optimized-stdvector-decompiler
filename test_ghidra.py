@@ -118,11 +118,6 @@ def main():
         print("=" * 80)
         print("SOME TESTS FAILED")
         print("=" * 80)
-        print("")
-        print("Possible causes:")
-        print("  - OptimizedVectorDecompiler extension not installed or not enabled")
-        print("  - Extension JAR not in $GHIDRA_INSTALL_DIR/Ghidra/Features/Decompiler/lib/")
-        print("  - Analyzing wrong binary (use vector_extra_O2.exe, not _Od)")
         return 1
 
 if __name__ == '__main__' or __name__ == '__builtin__':
