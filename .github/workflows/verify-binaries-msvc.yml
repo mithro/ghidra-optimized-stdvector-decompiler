@@ -13,11 +13,11 @@ on:
 
 jobs:
   verify-msvc:
-    name: Rebuild and verify binaries (Native MSVC 14.44)
+    name: Verify committed binaries match source (Native MSVC 14.44)
     runs-on: windows-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout code with committed binaries
         uses: actions/checkout@v4
         with:
           submodules: true
@@ -70,7 +70,7 @@ jobs:
           curl -LsSf https://astral.sh/uv/install.sh | sh
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
-      - name: Compare rebuilt binaries to committed versions
+      - name: Verify committed binaries match rebuilt binaries
         if: env.BINARIES_EXIST == 'true'
         shell: bash
         run: |
@@ -96,12 +96,12 @@ jobs:
             if uv run python scripts/compare_binaries.py \
                 "$binary.committed" \
                 "$binary"; then
-              echo "SUCCESS: $binary matches committed version"
+              echo "✓ PASS: Committed binary matches current source/config"
             else
               COMPARE_EXIT=$?
               if [ $COMPARE_EXIT -eq 1 ]; then
                 echo ""
-                echo "ERROR: $binary differs from committed version!"
+                echo "✗ FAIL: Committed binary is STALE!\n  Source code or build config changed - binary needs updating"
                 EXIT_CODE=1
               else
                 echo "ERROR: Comparison failed with exit code $COMPARE_EXIT"
@@ -113,7 +113,7 @@ jobs:
           if [ $EXIT_CODE -ne 0 ]; then
             echo ""
             echo "============================================================"
-            echo "ERROR: Binary verification failed!"
+            echo "ERROR: Committed binaries are out of sync with source!"
             echo "============================================================"
             echo ""
             echo "To update binaries:"
