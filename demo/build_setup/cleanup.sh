@@ -44,13 +44,11 @@ MSVC_DIR="${MSVC_DIR:-$HOME/.msvc}"
 WINE_PREFIX="$HOME/.wine_msvc"
 TOOLS_DIR="$SCRIPT_DIR/tools"
 WINETRICKS_CACHE="$HOME/.cache/winetricks"
-BUILD_ARTIFACTS="$SCRIPT_DIR/../"
 
 echo "Checking what will be deleted..."
 echo ""
 
 # Track what exists
-TOTAL_SIZE=0
 ITEMS_TO_DELETE=()
 
 echo "[1] MSVC Headers and SDK"
@@ -127,7 +125,6 @@ done
 echo ""
 
 # Check if winetricks cache should be deleted
-DELETE_WINETRICKS_CACHE=false
 if [ -d "$WINETRICKS_CACHE" ]; then
     CACHE_SIZE=$(get_size "$WINETRICKS_CACHE")
     echo "Additional optional cleanup:"
@@ -136,7 +133,6 @@ if [ -d "$WINETRICKS_CACHE" ]; then
     read -p "Delete winetricks cache? (shared with other Wine apps) [y/N]: " -n 1 -r
     echo ""
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        DELETE_WINETRICKS_CACHE=true
         ITEMS_TO_DELETE+=("$WINETRICKS_CACHE")
     fi
     echo ""
