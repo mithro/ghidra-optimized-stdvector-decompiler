@@ -179,6 +179,7 @@ Use Visual Studio or Build Tools on a Windows machine.
 | `setup_msvc_winetricks.sh` | Alternative: GUI installer via Wine |
 | `install_wine_deps.sh` | Helper: Installs Wine dependencies |
 | `check_wine_msvc.sh` | Utility: Tests Wine MSVC installation |
+| `cleanup.sh` | Cleanup: Removes build environment (~7-8 GB) |
 
 ## Troubleshooting
 
@@ -283,6 +284,28 @@ Environment OK!
 - Official installer
 - Manual control
 - Good for one-time builds
+
+## Cleanup / Uninstall
+
+To remove the build environment and free disk space:
+
+```bash
+cd demo/build_setup
+./cleanup.sh
+```
+
+The cleanup script will:
+- Show what files will be deleted and their sizes
+- Ask for confirmation before deletion
+- Remove `~/.msvc` (MSVC headers and SDK, ~5GB)
+- Remove `~/.wine_msvc` (Wine MSVC prefix, ~2GB)
+- Remove `tools/` directory (build tools, ~5MB)
+- Optionally remove `~/.cache/winetricks` (~500MB, shared with other Wine apps)
+- Display total disk space freed
+
+**Note:** The script does NOT uninstall system packages (clang, wine, etc.) - only the downloaded MSVC toolchain and build artifacts.
+
+Total space freed: **~7-8 GB** (without winetricks cache) or **~8-9 GB** (with cache)
 
 ## Advanced: Custom MSVC Versions
 
