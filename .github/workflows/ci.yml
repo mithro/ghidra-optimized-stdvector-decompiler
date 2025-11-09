@@ -103,7 +103,7 @@ jobs:
       - name: Run integration tests
         run: |
           export PATH="$HOME/.cargo/bin:$PATH"
-          uv run python test.py
+          uv run python test_all_compilers.py
         env:
           GHIDRA_INSTALL_DIR: ${{ env.GHIDRA_INSTALL_DIR }}
 
