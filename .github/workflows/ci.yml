@@ -74,38 +74,12 @@ jobs:
           name: extension-jar-java${{ matrix.java-version }}
           path: extension/build/libs/
 
-      - name: Install extension to Ghidra
+      - name: Install extension using setup.sh
         run: |
-          mkdir -p "$GHIDRA_INSTALL_DIR/Extensions/Ghidra"
-          cp extension/build/libs/*.jar "$GHIDRA_INSTALL_DIR/Extensions/Ghidra/"
-          echo "Extension installed to $GHIDRA_INSTALL_DIR/Extensions/Ghidra/"
-          ls -lh "$GHIDRA_INSTALL_DIR/Extensions/Ghidra/"
-
-      - name: Copy extension to Decompiler lib (headless mode)
-        run: |
-          mkdir -p "$GHIDRA_INSTALL_DIR/Ghidra/Features/Decompiler/lib"
-          cp extension/build/libs/*.jar "$GHIDRA_INSTALL_DIR/Ghidra/Features/Decompiler/lib/"
-
-      - name: Enable extension for headless mode
-        run: |
-          # Determine Ghidra version for user directory
-          GHIDRA_VERSION="${{ matrix.ghidra-version }}"
-          GHIDRA_USER_DIR="$HOME/.ghidra/.ghidra_${GHIDRA_VERSION}_PUBLIC"
-          PREFS_DIR="$GHIDRA_USER_DIR/preferences"
-          mkdir -p "$PREFS_DIR"
-
-          # Create ExtensionProvider preferences file
-          cat > "$PREFS_DIR/ExtensionProvider" <<'EOF'
-          <?xml version="1.0" encoding="UTF-8"?>
-          <FILE_INFO>
-              <BASIC_INFO>
-                  <STATE NAME="Extension States" TYPE="string" VALUE="OptimizedVectorDecompiler:true;" />
-              </BASIC_INFO>
-          </FILE_INFO>
-          EOF
-
-          echo "Extension enabled for Ghidra $GHIDRA_VERSION"
-          echo "Preferences file: $PREFS_DIR/ExtensionProvider"
+          # Run setup.sh with --skip-build since JAR already exists
+          ./setup.sh --skip-build
+        env:
+          GHIDRA_INSTALL_DIR: ${{ env.GHIDRA_INSTALL_DIR }}
 
       - name: Setup Python and uv
         run: |
