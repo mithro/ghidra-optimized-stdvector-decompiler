@@ -49,7 +49,7 @@ ifeq ($(USE_NATIVE_MSVC),1)
   # Native MSVC link flags
   LINKFLAGS := /DEBUG:FULL \
 	/stub:$(CURDIR)/build_setup/dosstub.exe \
-	/Brepro
+	/TIMESTAMP:1
 else
   # clang-cl: Need explicit MSVC header paths for cross-compilation
   CXXFLAGS_COMMON := $(CXXFLAGS_BASE) -fuse-ld=$(LLD_LINK) \
@@ -64,7 +64,7 @@ else
 	/LIBPATH:"$(SDK_LIB)/um/x64" \
 	/DEBUG:FULL \
 	/stub:$(CURDIR)/build_setup/dosstub.exe \
-	/Brepro
+	/TIMESTAMP:1
 endif
 
 LINKFLAGS_O2 := /OPT:REF /OPT:ICF
