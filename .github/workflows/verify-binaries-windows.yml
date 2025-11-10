@@ -3,10 +3,10 @@ name: Verify Binaries (Windows)
 on:
   pull_request:
     paths:
-      - 'demo/*.cpp'
+      - 'demo/**'
   push:
     paths:
-      - 'demo/*.cpp'
+      - 'demo/**'
   workflow_dispatch:
 
 jobs:

@@ -3,14 +3,10 @@ name: Verify Binaries (Linux)
 on:
   pull_request:
     paths:
-      - 'demo/*.cpp'
-      - 'demo/Makefile'
-      - 'demo/build_setup/**'
+      - 'demo/**'
   push:
     paths:
-      - 'demo/*.cpp'
-      - 'demo/Makefile'
-      - 'demo/build_setup/**'
+      - 'demo/**'
   workflow_dispatch:
 
 jobs:
