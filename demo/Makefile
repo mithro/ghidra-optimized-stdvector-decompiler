@@ -50,6 +50,7 @@ ifeq ($(USE_NATIVE_MSVC),1)
   LINKFLAGS := /DEBUG:FULL \
 	/PDBALTPATH:%_PDB% \
 	/stub:$(CURDIR)/build_setup/dosstub.exe \
+	/Brepro \
 	/TIMESTAMP:1
 else
   # clang-cl: Need explicit MSVC header paths for cross-compilation
@@ -66,6 +67,7 @@ else
 	/DEBUG:FULL \
 	/PDBALTPATH:%_PDB% \
 	/stub:$(CURDIR)/build_setup/dosstub.exe \
+	/Brepro \
 	/TIMESTAMP:1
 endif
 
