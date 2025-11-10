@@ -60,7 +60,7 @@ jobs:
       - name: Backup and remove committed binaries to force rebuild
         run: |
           cd demo
-          for binary in out/clang-20/vector_extra_O2.exe out/clang-20/vector_extra_Od.exe; do
+          for binary in out/clang-20/vector_basic_O2.exe out/clang-20/vector_basic_Od.exe out/clang-20/vector_extra_O2.exe out/clang-20/vector_extra_Od.exe; do
             if [ -f "$binary" ]; then
               cp "$binary" "$binary.committed"
               rm "$binary"
@@ -75,7 +75,7 @@ jobs:
       - name: Rebuild binaries from current source code
         run: |
           cd demo
-          make COMPILER=clang-20 extra
+          make COMPILER=clang-20 all
         timeout-minutes: 45
 
       - name: Setup Python and uv
@@ -90,7 +90,7 @@ jobs:
 
           EXIT_CODE=0
 
-          for binary in out/clang-20/vector_extra_O2.exe out/clang-20/vector_extra_Od.exe; do
+          for binary in out/clang-20/vector_basic_O2.exe out/clang-20/vector_basic_Od.exe out/clang-20/vector_extra_O2.exe out/clang-20/vector_extra_Od.exe; do
             echo ""
             echo "=========================================="
             echo "Comparing $binary"
@@ -129,9 +129,10 @@ jobs:
             echo ""
             echo "To update binaries:"
             echo "  1. cd demo"
-            echo "  3. make COMPILER=clang-20 extra"
-            echo "  4. git add out/clang-20/vector_extra_O2.exe out/clang-20/vector_extra_Od.exe out/clang-20/*.pdb"
-            echo "  5. git commit -m 'build: Update clang-20 demo binaries'"
+            echo "  2. make COMPILER=clang-20 all"
+            echo "  3. cd out && git add clang-20/*.exe clang-20/*.pdb"
+            echo "  4. git commit -m 'build: Update clang-20 demo binaries'"
+            echo "  5. git push && cd ../.. && git add demo/out && git commit && git push"
             echo "============================================================"
           fi
 
@@ -143,8 +144,7 @@ jobs:
         with:
           name: rebuilt-binaries-clang-20
           path: |
-            demo/out/clang-20/vector_extra_O2.exe
-            demo/out/clang-20/vector_extra_Od.exe
+            demo/out/clang-20/*.exe
             demo/out/clang-20/*.pdb
           retention-days: 7
 

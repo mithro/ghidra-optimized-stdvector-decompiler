@@ -34,7 +34,7 @@ jobs:
         shell: bash
         run: |
           cd demo
-          for binary in out/msvc-14.44/vector_extra_O2.exe out/msvc-14.44/vector_extra_Od.exe; do
+          for binary in out/msvc-14.44/vector_basic_O2.exe out/msvc-14.44/vector_basic_Od.exe out/msvc-14.44/vector_extra_O2.exe out/msvc-14.44/vector_extra_Od.exe; do
             if [ -f "$binary" ]; then
               cp "$binary" "$binary.committed"
               rm "$binary"
@@ -50,7 +50,7 @@ jobs:
         shell: bash
         run: |
           cd demo
-          make COMPILER=msvc-14.44 extra
+          make COMPILER=msvc-14.44 all
         timeout-minutes: 45
 
       - name: Setup Python
@@ -72,7 +72,7 @@ jobs:
 
           EXIT_CODE=0
 
-          for binary in out/msvc-14.44/vector_extra_O2.exe out/msvc-14.44/vector_extra_Od.exe; do
+          for binary in out/msvc-14.44/vector_basic_O2.exe out/msvc-14.44/vector_basic_Od.exe out/msvc-14.44/vector_extra_O2.exe out/msvc-14.44/vector_extra_Od.exe; do
             echo ""
             echo "=========================================="
             echo "Comparing $binary"
@@ -111,9 +111,10 @@ jobs:
             echo ""
             echo "To update binaries:"
             echo "  1. cd demo"
-            echo "  2. make COMPILER=msvc-14.44 extra"
-            echo "  3. git add out/msvc-14.44/vector_extra_O2.exe out/msvc-14.44/vector_extra_Od.exe out/msvc-14.44/*.pdb"
+            echo "  2. make COMPILER=msvc-14.44 all"
+            echo "  3. cd out && git add msvc-14.44/*.exe msvc-14.44/*.pdb"
             echo "  4. git commit -m 'build: Update msvc-14.44 demo binaries'"
+            echo "  5. git push && cd ../.. && git add demo/out && git commit && git push"
             echo "============================================================"
           fi
 
@@ -125,8 +126,7 @@ jobs:
         with:
           name: rebuilt-binaries-msvc-14.44
           path: |
-            demo/out/msvc-14.44/vector_extra_O2.exe
-            demo/out/msvc-14.44/vector_extra_Od.exe
+            demo/out/msvc-14.44/*.exe
             demo/out/msvc-14.44/*.pdb
           retention-days: 7
 
