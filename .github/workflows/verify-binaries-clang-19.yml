@@ -1,0 +1,157 @@
+name: Verify Binaries (clang-19)
+
+on:
+  pull_request:
+    paths:
+      - 'demo/**'
+      - '.github/workflows/verify-binaries-clang-19.yml'
+  push:
+    paths:
+      - 'demo/**'
+      - '.github/workflows/verify-binaries-clang-19.yml'
+  workflow_dispatch:
+
+jobs:
+  verify-clang-19:
+    name: Verify committed binaries match source (Wine + clang-19)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code with committed binaries
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y python3 msitools ca-certificates wget git curl clang-19 lld-19
+
+      - name: Create clang-cl symlinks
+        run: |
+          sudo ln -sf /usr/lib/llvm-19/bin/clang /usr/bin/clang-cl-19
+          sudo ln -sf /usr/lib/llvm-19/bin/lld-link /usr/bin/lld-link-19
+          echo "✓ Created clang-cl-19: $(clang-cl-19 --version | head -1)"
+
+      - name: Cache MSVC toolchain
+        id: cache-msvc
+        uses: actions/cache@v4
+        with:
+          path: ~/.msvc
+          key: msvc-14.44-sdk-10.0.26100-${{ runner.os }}-${{ hashFiles('demo/setup_build_env_user.sh') }}
+
+      - name: Setup MSVC toolchain (download if not cached)
+        if: steps.cache-msvc.outputs.cache-hit != 'true'
+        run: |
+          cd demo
+          bash ./setup_build_env_user.sh
+
+      - name: Verify MSVC toolchain
+        run: |
+          echo "Checking MSVC toolchain at ~/.msvc"
+          if [ -f ~/.msvc/Windows\ Kits/10/Include/10.0.26100.0/ucrt/malloc.h ]; then
+            echo "✓ MSVC toolchain available at ~/.msvc"
+            du -sh ~/.msvc
+          else
+            echo "✗ ERROR: MSVC toolchain not found - build will fail"
+            exit 1
+          fi
+
+      - name: Backup and remove committed binaries to force rebuild
+        run: |
+          cd demo
+          for binary in out/clang-19/vector_extra_O2.exe out/clang-19/vector_extra_Od.exe; do
+            if [ -f "$binary" ]; then
+              cp "$binary" "$binary.committed"
+              rm "$binary"
+              echo "Backed up and removed $binary"
+              ls -lh "$binary.committed"
+            else
+              echo "ERROR: Committed binary not found: $binary"
+              exit 1
+            fi
+          done
+
+      - name: Rebuild binaries from current source code
+        run: |
+          cd demo
+          make COMPILER=clang-19 extra
+        timeout-minutes: 45
+
+      - name: Setup Python and uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Verify committed binaries match rebuilt binaries
+        run: |
+          export PATH="$HOME/.cargo/bin:$PATH"
+          cd demo
+
+          EXIT_CODE=0
+
+          for binary in out/clang-19/vector_extra_O2.exe out/clang-19/vector_extra_Od.exe; do
+            echo ""
+            echo "=========================================="
+            echo "Comparing $binary"
+            echo "=========================================="
+
+            # Verify the binary was rebuilt
+            if [ ! -f "$binary" ]; then
+              echo "ERROR: Failed to rebuild $binary"
+              EXIT_CODE=1
+              continue
+            fi
+
+            # Compare committed vs rebuilt
+            if uv run python scripts/compare_binaries.py \
+                "$binary.committed" \
+                "$binary"; then
+              echo "✓ PASS: Committed binary matches current source/config"
+            else
+              COMPARE_EXIT=$?
+              if [ $COMPARE_EXIT -eq 1 ]; then
+                echo ""
+                echo "✗ FAIL: Committed binary is STALE!\n  Source code or build config changed - binary needs updating"
+                EXIT_CODE=1
+              else
+                echo "ERROR: Comparison failed with exit code $COMPARE_EXIT"
+                EXIT_CODE=2
+              fi
+            fi
+          done
+
+          if [ $EXIT_CODE -ne 0 ]; then
+            echo ""
+            echo "============================================================"
+            echo "ERROR: Committed binaries are out of sync with source!"
+            echo "============================================================"
+            echo ""
+            echo "To update binaries:"
+            echo "  1. cd demo"
+            echo "  3. make COMPILER=clang-19 extra"
+            echo "  4. git add out/clang-19/vector_extra_O2.exe out/clang-19/vector_extra_Od.exe out/clang-19/*.pdb"
+            echo "  5. git commit -m 'build: Update clang-19 demo binaries'"
+            echo "============================================================"
+          fi
+
+          exit $EXIT_CODE
+
+      - name: Upload rebuilt binaries for inspection
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rebuilt-binaries-clang-19
+          path: |
+            demo/out/clang-19/vector_extra_O2.exe
+            demo/out/clang-19/vector_extra_Od.exe
+            demo/out/clang-19/*.pdb
+          retention-days: 7
+
+      - name: Upload build logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs-clang-19
+          path: demo/*.log
+          retention-days: 7

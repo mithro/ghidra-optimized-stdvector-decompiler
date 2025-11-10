@@ -4,50 +4,82 @@
 
 set -euo pipefail
 
-# Script directory
-SETUP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-# Source common utilities and installers
-source "$SETUP_DIR/scripts/common.sh"
-source "$SETUP_DIR/scripts/install_java.sh"
-source "$SETUP_DIR/scripts/install_ghidra.sh"
-
-# Restore SCRIPT_DIR for rest of setup.sh
-SCRIPT_DIR="$SETUP_DIR"
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
 
 # Configuration
-INSTALL_DIR="${INSTALL_DIR:-$HOME/tools}"
 GHIDRA_VERSION="${GHIDRA_VERSION:-11.4.2}"
-GHIDRA_INSTALL_DIR="${GHIDRA_INSTALL_DIR:-$INSTALL_DIR/ghidra}"
+GHIDRA_INSTALL_DIR="${GHIDRA_INSTALL_DIR:-$HOME/tools/ghidra}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SKIP_BUILD=false
+
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --skip-build)
+            SKIP_BUILD=true
+            shift
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Usage: $0 [--skip-build]"
+            exit 1
+            ;;
+    esac
+done
+
+# Helper functions
+print_status() {
+    echo -e "${GREEN}✓${NC} $1"
+}
+
+print_warning() {
+    echo -e "${YELLOW}⚠${NC} $1"
+}
+
+print_error() {
+    echo -e "${RED}✗${NC} $1"
+}
+
+print_info() {
+    echo -e "${BLUE}ℹ${NC} $1"
+}
 
 echo -e "${BLUE}======================================================================${NC}"
 echo -e "${BLUE}      Optimized Vector Decompiler Ghidra Plugin - Setup${NC}"
 echo -e "${BLUE}======================================================================${NC}"
 echo ""
 
-# Install Java if needed
-run_java_installer
-
-# Install Ghidra if needed
-run_ghidra_installer
-
-# Step 1: Verify Ghidra installation
-echo ""
-echo -e "${BLUE}Step 1: Verifying Ghidra installation...${NC}"
+# Step 1: Check for Ghidra
+echo -e "${BLUE}Step 1: Checking for Ghidra installation...${NC}"
 if [ -d "$GHIDRA_INSTALL_DIR" ] && [ -f "$GHIDRA_INSTALL_DIR/ghidraRun" ]; then
-    print_status "Ghidra verified at: $GHIDRA_INSTALL_DIR"
+    print_status "Ghidra found at: $GHIDRA_INSTALL_DIR"
 else
-    fail "Ghidra installation failed. Please check errors above."
+    print_error "Ghidra not found at: $GHIDRA_INSTALL_DIR"
+    echo ""
+    print_info "Please install Ghidra 11.4.2 from:"
+    echo "  https://github.com/NationalSecurityAgency/ghidra/releases"
+    echo ""
+    print_info "Or set GHIDRA_INSTALL_DIR to your Ghidra installation:"
+    echo "  export GHIDRA_INSTALL_DIR=/path/to/ghidra"
+    echo "  ./setup.sh"
+    exit 1
 fi
 
-# Step 2: Verify Java installation
+# Step 2: Check Java
 echo ""
-echo -e "${BLUE}Step 2: Verifying Java installation...${NC}"
+echo -e "${BLUE}Step 2: Checking Java installation...${NC}"
 if command -v java &> /dev/null; then
     JAVA_VERSION=$(java -version 2>&1 | head -n 1 | cut -d'"' -f2)
-    print_status "Java verified: $JAVA_VERSION"
+    print_status "Java found: $JAVA_VERSION"
 else
-    fail "Java installation failed. Please check errors above."
+    print_error "Java not found. Ghidra requires Java 17 or later."
+    print_info "Install with: sudo apt-get install openjdk-21-jdk"
+    exit 1
 fi
 
 # Step 3: Create user directories
@@ -58,65 +90,99 @@ mkdir -p "$GHIDRA_USER_DIR/Extensions"
 mkdir -p "$GHIDRA_USER_DIR/ghidra_scripts"
 print_status "User directories created"
 
-# Step 4: Building OptimizedVectorDecompiler extension
+# Step 4: Build extension
 echo ""
-echo -e "${BLUE}Step 4: Building OptimizedVectorDecompiler extension...${NC}"
 EXTENSION_DIR="$SCRIPT_DIR/extension"
 
-cd "$EXTENSION_DIR"
-print_info "Building extension..."
+JAR_FILE="$EXTENSION_DIR/build/libs/OptimizedVectorDecompiler.jar"
 
-export GHIDRA_INSTALL_DIR
+if [ "$SKIP_BUILD" = true ]; then
+    echo -e "${BLUE}Step 4: Skipping build (--skip-build specified)...${NC}"
+    print_info "Using pre-built extension JAR"
 
-# Stop any running Gradle daemons to pick up newly installed JDK
-if [ -f "gradle/bin/gradle" ]; then
-    ./gradle/bin/gradle --stop &>/dev/null || true
-fi
-
-if [ -f "build.sh" ]; then
-    bash build.sh
+    # Verify JAR exists
+    if [ ! -f "$JAR_FILE" ]; then
+        print_error "Pre-built JAR not found at: $JAR_FILE"
+        print_info "Remove --skip-build to build from source"
+        exit 1
+    fi
+    print_status "Found pre-built JAR"
 else
-    print_error "Build script not found!"
-    exit 1
-fi
+    echo -e "${BLUE}Step 4: Building OptimizedVectorDecompiler extension...${NC}"
+    cd "$EXTENSION_DIR"
+    print_info "Building extension..."
 
-print_status "Extension built successfully"
+    export GHIDRA_INSTALL_DIR
+
+    if [ -f "build.sh" ]; then
+        bash build.sh
+    else
+        print_error "Build script not found!"
+        exit 1
+    fi
+
+    print_status "Extension built successfully"
+fi
 
 # Step 5: Install extension
 echo ""
 echo -e "${BLUE}Step 5: Installing extension...${NC}"
 
-# Find the latest built extension
-DIST_FILE=$(ls -t "$EXTENSION_DIR/dist"/*.zip 2>/dev/null | head -1)
-
-if [ -z "$DIST_FILE" ]; then
-    print_error "No extension package found in $EXTENSION_DIR/dist/"
-    exit 1
-fi
-
-print_info "Found extension package: $(basename "$DIST_FILE")"
-
-# Install to Ghidra system extensions
 SYSTEM_EXT_DIR="$GHIDRA_INSTALL_DIR/Extensions/Ghidra"
-mkdir -p "$SYSTEM_EXT_DIR"
+DECOMPILER_LIB="$GHIDRA_INSTALL_DIR/Ghidra/Features/Decompiler/lib"
 
-print_info "Extracting to system extensions directory..."
-unzip -q -o "$DIST_FILE" -d "$SYSTEM_EXT_DIR/"
+if [ "$SKIP_BUILD" = true ]; then
+    # Skip build mode: Create extension directory structure manually
+    print_info "Creating extension directory structure..."
+    EXT_INSTALL_DIR="$SYSTEM_EXT_DIR/OptimizedVectorDecompiler"
+    mkdir -p "$EXT_INSTALL_DIR/lib"
 
-# Also copy JAR to Decompiler lib for headless mode
-JAR_FILE="$EXTENSION_DIR/build/libs/OptimizedVectorDecompiler.jar"
-if [ -f "$JAR_FILE" ]; then
-    DECOMPILER_LIB="$GHIDRA_INSTALL_DIR/Ghidra/Features/Decompiler/lib"
+    # Copy JAR to extension lib directory
+    cp "$JAR_FILE" "$EXT_INSTALL_DIR/lib/"
+
+    # Copy extension.properties
+    if [ -f "$EXTENSION_DIR/extension.properties" ]; then
+        cp "$EXTENSION_DIR/extension.properties" "$EXT_INSTALL_DIR/"
+    else
+        print_warning "extension.properties not found"
+    fi
+
+    # Also copy to Decompiler lib for headless mode
     if [ -d "$DECOMPILER_LIB" ]; then
         print_info "Installing JAR for headless mode..."
         cp "$JAR_FILE" "$DECOMPILER_LIB/"
         print_status "JAR installed to Decompiler lib"
     fi
+else
+    # Normal mode: Extract from distribution ZIP
+    DIST_FILE=$(ls -t "$EXTENSION_DIR/dist"/*.zip 2>/dev/null | head -1)
+
+    if [ -z "$DIST_FILE" ]; then
+        print_error "No extension package found in $EXTENSION_DIR/dist/"
+        exit 1
+    fi
+
+    print_info "Found extension package: $(basename "$DIST_FILE")"
+
+    # Install to Ghidra system extensions
+    mkdir -p "$SYSTEM_EXT_DIR"
+
+    print_info "Extracting to system extensions directory..."
+    unzip -q -o "$DIST_FILE" -d "$SYSTEM_EXT_DIR/"
+
+    # Also copy JAR to Decompiler lib for headless mode (JAR_FILE already set in Step 4)
+    if [ -f "$JAR_FILE" ]; then
+        if [ -d "$DECOMPILER_LIB" ]; then
+            print_info "Installing JAR for headless mode..."
+            cp "$JAR_FILE" "$DECOMPILER_LIB/"
+            print_status "JAR installed to Decompiler lib"
+        fi
+    fi
 fi
 
 print_status "OptimizedVectorDecompiler extension installed"
 
-# Step 6: Enabling extension
+# Step 6: Auto-enable extension
 echo ""
 echo -e "${BLUE}Step 6: Enabling extension...${NC}"
 PREFS_DIR="$GHIDRA_USER_DIR/preferences"
@@ -145,7 +211,7 @@ fi
 
 print_info "Extension is enabled for both GUI and headless modes"
 
-# Step 7: Verifying installation
+# Step 7: Verification
 echo ""
 echo -e "${BLUE}Step 7: Verifying installation...${NC}"
 

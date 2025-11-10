@@ -1,35 +1,44 @@
-name: Verify Binaries (Linux)
+name: Verify Binaries (msvc-14.44)
 
 on:
   pull_request:
     paths:
       - 'demo/**'
+      - '.github/workflows/verify-binaries-msvc.yml'
   push:
     paths:
       - 'demo/**'
+      - '.github/workflows/verify-binaries-msvc.yml'
   workflow_dispatch:
 
 jobs:
-  verify-linux:
-    name: Rebuild and verify binaries (Wine + MSVC)
-    runs-on: ubuntu-latest
+  verify-msvc:
+    name: Verify committed binaries match source (Native MSVC 14.44)
+    runs-on: windows-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          submodules: true
 
-      - name: Install prerequisites
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y python3 msitools ca-certificates wget git curl
+      - name: Setup MSVC
+        uses: microsoft/setup-msbuild@v2
 
-      - name: Backup committed binaries before rebuild
+      - name: Setup MSVC environment
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Backup and remove committed binaries to force rebuild
+        shell: bash
         run: |
           cd demo
-          for binary in vector_extra_O2.exe vector_extra_Od.exe; do
+          for binary in out/msvc-14.44/vector_extra_O2.exe out/msvc-14.44/vector_extra_Od.exe; do
             if [ -f "$binary" ]; then
               cp "$binary" "$binary.committed"
-              echo "Backed up $binary to $binary.committed"
+              rm "$binary"
+              echo "Backed up and removed $binary"
               ls -lh "$binary.committed"
             else
               echo "ERROR: Committed binary not found: $binary"
@@ -37,28 +46,33 @@ jobs:
             fi
           done
 
-      - name: Setup MSVC toolchain and build binaries
+      - name: Rebuild binaries from current source code
+        shell: bash
         run: |
           cd demo
-          chmod +x setup_build_env.sh
-          # Auto-confirm setup (non-interactive for CI)
-          echo "y" | ./setup_build_env.sh
-          make extra
+          make COMPILER=msvc-14.44 extra
         timeout-minutes: 45
 
-      - name: Setup Python and uv
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        shell: bash
         run: |
           curl -LsSf https://astral.sh/uv/install.sh | sh
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
-      - name: Compare rebuilt binaries to committed versions
+      - name: Verify committed binaries match rebuilt binaries
+        shell: bash
         run: |
           export PATH="$HOME/.cargo/bin:$PATH"
           cd demo
 
           EXIT_CODE=0
 
-          for binary in vector_extra_O2.exe vector_extra_Od.exe; do
+          for binary in out/msvc-14.44/vector_extra_O2.exe out/msvc-14.44/vector_extra_Od.exe; do
             echo ""
             echo "=========================================="
             echo "Comparing $binary"
@@ -75,12 +89,12 @@ jobs:
             if uv run python scripts/compare_binaries.py \
                 "$binary.committed" \
                 "$binary"; then
-              echo "SUCCESS: $binary matches committed version"
+              echo "✓ PASS: Committed binary matches current source/config"
             else
               COMPARE_EXIT=$?
               if [ $COMPARE_EXIT -eq 1 ]; then
                 echo ""
-                echo "ERROR: $binary differs from committed version!"
+                echo "✗ FAIL: Committed binary is STALE!\n  Source code or build config changed - binary needs updating"
                 EXIT_CODE=1
               else
                 echo "ERROR: Comparison failed with exit code $COMPARE_EXIT"
@@ -92,15 +106,14 @@ jobs:
           if [ $EXIT_CODE -ne 0 ]; then
             echo ""
             echo "============================================================"
-            echo "ERROR: Binary verification failed!"
+            echo "ERROR: Committed binaries are out of sync with source!"
             echo "============================================================"
             echo ""
             echo "To update binaries:"
             echo "  1. cd demo"
-            echo "  2. ./setup_build_env.sh"
-            echo "  3. make extra"
-            echo "  4. git add vector_extra_O2.exe vector_extra_Od.exe *.pdb"
-            echo "  5. git commit -m 'build: Update demo binaries'"
+            echo "  2. make COMPILER=msvc-14.44 extra"
+            echo "  3. git add out/msvc-14.44/vector_extra_O2.exe out/msvc-14.44/vector_extra_Od.exe out/msvc-14.44/*.pdb"
+            echo "  4. git commit -m 'build: Update msvc-14.44 demo binaries'"
             echo "============================================================"
           fi
 
@@ -110,17 +123,17 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: rebuilt-binaries-linux
+          name: rebuilt-binaries-msvc-14.44
           path: |
-            demo/vector_extra_O2.exe
-            demo/vector_extra_Od.exe
-            demo/*.pdb
+            demo/out/msvc-14.44/vector_extra_O2.exe
+            demo/out/msvc-14.44/vector_extra_Od.exe
+            demo/out/msvc-14.44/*.pdb
           retention-days: 7
 
       - name: Upload build logs on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: build-logs-linux
+          name: build-logs-msvc-14.44
           path: demo/*.log
           retention-days: 7

@@ -18,6 +18,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          submodules: true
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -56,6 +58,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          submodules: true
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -74,17 +78,22 @@ jobs:
           name: extension-jar-java${{ matrix.java-version }}
           path: extension/build/libs/
 
-      - name: Install extension to Ghidra
+      - name: Debug - List downloaded files
         run: |
-          mkdir -p "$GHIDRA_INSTALL_DIR/Extensions/Ghidra"
-          cp extension/build/libs/*.jar "$GHIDRA_INSTALL_DIR/Extensions/Ghidra/"
-          echo "Extension installed to $GHIDRA_INSTALL_DIR/Extensions/Ghidra/"
-          ls -lh "$GHIDRA_INSTALL_DIR/Extensions/Ghidra/"
+          echo "Contents of extension/build/libs/:"
+          ls -lR extension/build/libs/ || echo "Directory not found"
+          echo "Looking for JAR from setup.sh perspective:"
+          SCRIPT_DIR="$(pwd)"
+          echo "SCRIPT_DIR=$SCRIPT_DIR"
+          echo "Looking for: $SCRIPT_DIR/extension/build/libs/OptimizedVectorDecompiler.jar"
+          ls -l "$SCRIPT_DIR/extension/build/libs/OptimizedVectorDecompiler.jar" || echo "JAR not found at expected path"
 
-      - name: Copy extension to Decompiler lib (headless mode)
+      - name: Install extension using setup.sh
         run: |
-          mkdir -p "$GHIDRA_INSTALL_DIR/Ghidra/Features/Decompiler/lib"
-          cp extension/build/libs/*.jar "$GHIDRA_INSTALL_DIR/Ghidra/Features/Decompiler/lib/"
+          # Run setup.sh with --skip-build since JAR already exists
+          ./setup.sh --skip-build
+        env:
+          GHIDRA_INSTALL_DIR: ${{ env.GHIDRA_INSTALL_DIR }}
 
       - name: Setup Python and uv
         run: |
@@ -94,7 +103,7 @@ jobs:
       - name: Run integration tests
         run: |
           export PATH="$HOME/.cargo/bin:$PATH"
-          uv run python test.py
+          uv run python test_all_compilers.py
         env:
           GHIDRA_INSTALL_DIR: ${{ env.GHIDRA_INSTALL_DIR }}
 
