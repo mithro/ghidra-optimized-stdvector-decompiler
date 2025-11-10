@@ -29,7 +29,9 @@ CXXFLAGS_Od := /Od /Zi
 LINKFLAGS := /LIBPATH:"$(MSVC_LIB)" \
 	/LIBPATH:"$(SDK_LIB)/ucrt/x64" \
 	/LIBPATH:"$(SDK_LIB)/um/x64" \
-	/DEBUG:FULL
+	/DEBUG:FULL \
+	/STUB:build_setup/dosstub.exe \
+	/Brepro
 
 LINKFLAGS_O2 := /OPT:REF /OPT:ICF
 LINKFLAGS_Od := /OPT:NOREF /OPT:NOICF
