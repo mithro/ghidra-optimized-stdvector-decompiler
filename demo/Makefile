@@ -117,6 +117,7 @@ $(OUT_DIR)/%_O2.exe: %.cpp | init-submodule
 	@echo "Building optimized binary: $@ with $(COMPILER) ($(CXX))"
 	@mkdir -p $(OUT_DIR)
 	$(CXX) $(CXXFLAGS_COMMON) $(CXXFLAGS_O2) \
+		/Fo:$(OUT_DIR)/$*_O2.obj \
 		/Fe:$@ $< \
 		/link $(LINKFLAGS) $(LINKFLAGS_O2)
 
@@ -124,6 +125,7 @@ $(OUT_DIR)/%_Od.exe: %.cpp | init-submodule
 	@echo "Building debug binary: $@ with $(COMPILER) ($(CXX))"
 	@mkdir -p $(OUT_DIR)
 	$(CXX) $(CXXFLAGS_COMMON) $(CXXFLAGS_Od) \
+		/Fo:$(OUT_DIR)/$*_Od.obj \
 		/Fe:$@ $< \
 		/link $(LINKFLAGS) $(LINKFLAGS_Od)
 
