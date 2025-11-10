@@ -3,10 +3,10 @@ name: Verify Binaries (Windows)
 on:
   pull_request:
     paths:
-      - 'examples/vector_test/*.cpp'
+      - 'demo/**'
   push:
     paths:
-      - 'examples/vector_test/*.cpp'
+      - 'demo/**'
   workflow_dispatch:
 
 jobs:
@@ -26,32 +26,38 @@ jobs:
         with:
           arch: x64
 
-      # TODO: PR #9 will change paths from examples/vector_test/ to demo/
-      # Update binary paths when that PR merges
-      - name: Backup committed binary before rebuild
+      - name: Backup committed binaries before rebuild
         shell: bash
         run: |
-          cd examples/vector_test
-          if [ -f "vector_test_msvc.exe" ]; then
-            cp vector_test_msvc.exe vector_test_msvc.exe.committed
-            echo "Backed up committed binary to vector_test_msvc.exe.committed"
-            ls -lh vector_test_msvc.exe.committed
-          else
-            echo "ERROR: Committed binary not found: vector_test_msvc.exe"
-            exit 1
-          fi
+          cd demo
+          for binary in vector_extra_O2.exe vector_extra_Od.exe; do
+            if [ -f "$binary" ]; then
+              cp "$binary" "$binary.committed"
+              echo "Backed up $binary ($(stat -c%s $binary) bytes)"
+            else
+              echo "ERROR: Committed binary not found: $binary"
+              exit 1
+            fi
+          done
 
-      - name: Build binary with MSVC
+      - name: Build binaries with native MSVC (matching Makefile flags)
         shell: cmd
         run: |
-          cd examples\vector_test
+          cd demo
 
-          REM Compile with optimization (matching vector_test_msvc.exe)
-          cl /EHsc /O2 /Zi /std:c++17 /Fe:vector_test_msvc.exe vector_test.cpp /link /DEBUG /PDB:vector_test_msvc.pdb
+          REM Build optimized version with proper linker flags
+          REM Match Makefile flags: /MD /O2 /Zi + /DEBUG:FULL /OPT:REF /OPT:ICF /STUB: /Brepro
+          cl /EHsc /MD /O2 /Zi /std:c++17 /Fe:vector_extra_O2.exe vector_extra.cpp /link /DEBUG:FULL /OPT:REF /OPT:ICF /STUB:build_setup\dosstub.exe /Brepro
+          if not exist vector_extra_O2.exe (
+            echo ERROR: Failed to build vector_extra_O2.exe
+            exit /b 1
+          )
 
-          REM Verify the binary was created
-          if not exist vector_test_msvc.exe (
-            echo ERROR: Failed to build vector_test_msvc.exe
+          REM Build debug version
+          REM Match Makefile flags: /MD /Od /Zi + /DEBUG:FULL /OPT:NOREF /OPT:NOICF /STUB: /Brepro
+          cl /EHsc /MD /Od /Zi /std:c++17 /Fe:vector_extra_Od.exe vector_extra.cpp /link /DEBUG:FULL /OPT:NOREF /OPT:NOICF /STUB:build_setup\dosstub.exe /Brepro
+          if not exist vector_extra_Od.exe (
+            echo ERROR: Failed to build vector_extra_Od.exe
             exit /b 1
           )
 
@@ -66,71 +72,74 @@ jobs:
           curl -LsSf https://astral.sh/uv/install.sh | sh
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
-      # TODO: PR #9 will add multiple binaries (O2/Od optimization levels)
-      # Update this step to compare all binaries when that PR merges
-      - name: Compare rebuilt binary to committed version
+      - name: Compare rebuilt binaries to committed versions
         shell: bash
         run: |
           export PATH="$HOME/.cargo/bin:$PATH"
+          cd demo
 
-          cd examples/vector_test
+          EXIT_CODE=0
 
-          # Verify the binary was rebuilt
-          if [ ! -f "vector_test_msvc.exe" ]; then
-            echo "ERROR: Failed to rebuild vector_test_msvc.exe"
-            exit 1
+          for binary in vector_extra_O2.exe vector_extra_Od.exe; do
+            echo ""
+            echo "=========================================="
+            echo "Comparing $binary"
+            echo "=========================================="
+
+            # Verify the binary was rebuilt
+            if [ ! -f "$binary" ]; then
+              echo "ERROR: Failed to rebuild $binary"
+              EXIT_CODE=1
+              continue
+            fi
+
+            # Compare committed vs rebuilt
+            if uv run python scripts/compare_binaries.py \
+                "$binary.committed" \
+                "$binary"; then
+              echo "SUCCESS: $binary matches committed version"
+            else
+              COMPARE_EXIT=$?
+              if [ $COMPARE_EXIT -eq 1 ]; then
+                echo ""
+                echo "ERROR: $binary differs from committed version!"
+                EXIT_CODE=1
+              else
+                echo "ERROR: Comparison failed with exit code $COMPARE_EXIT"
+                EXIT_CODE=2
+              fi
+            fi
+          done
+
+          if [ $EXIT_CODE -ne 0 ]; then
+            echo ""
+            echo "============================================================"
+            echo "ERROR: Binary verification failed!"
+            echo "============================================================"
+            echo ""
+            echo "Note: Binaries differ between cl.exe (MSVC) and clang-cl."
+            echo "Committed binaries were built with clang-cl (Linux workflow)."
+            echo ""
+            echo "To update binaries, use the Linux workflow or run:"
+            echo "  cd demo"
+            echo "  ./setup_build_env.sh"
+            echo "  make extra"
+            echo "  git add vector_extra_O2.exe vector_extra_Od.exe *.pdb"
+            echo "  git commit -m 'build: Update demo binaries'"
+            echo "============================================================"
           fi
 
-          echo "Comparing committed binary to rebuilt version..."
-          echo ""
+          exit $EXIT_CODE
 
-          # Use compare_binaries.py to check if they match
-          # TODO: Update path to demo/scripts/compare_binaries.py when PR #9 merges
-          uv run ../../demo/scripts/compare_binaries.py \
-            vector_test_msvc.exe.committed \
-            vector_test_msvc.exe
-
-          COMPARE_EXIT=$?
-
-          if [ $COMPARE_EXIT -eq 0 ]; then
-            echo ""
-            echo "SUCCESS: Rebuilt binary matches the committed version."
-            exit 0
-          elif [ $COMPARE_EXIT -eq 1 ]; then
-            echo ""
-            echo "============================================================"
-            echo "ERROR: Binary mismatch detected!"
-            echo "============================================================"
-            echo ""
-            echo "The rebuilt binary differs from the committed version."
-            echo ""
-            echo "This means the checked-in binary is out of sync with the source code."
-            echo ""
-            echo "To fix this on Windows:"
-            echo "  1. Setup MSVC build environment"
-            echo "  2. cd examples/vector_test"
-            echo "  3. cl /EHsc /O2 /Zi /std:c++17 /Fe:vector_test_msvc.exe vector_test.cpp /link /DEBUG"
-            echo "  4. Commit the updated binary and PDB"
-            echo "  5. Push your changes"
-            echo ""
-            echo "Note: Native Windows builds are authoritative - minor differences"
-            echo "from Wine builds are expected, but Windows-to-Windows should match."
-            echo "============================================================"
-            exit 1
-          else
-            echo ""
-            echo "ERROR: Binary comparison failed with error code $COMPARE_EXIT"
-            exit 2
-          fi
-
-      - name: Upload rebuilt binary for inspection
+      - name: Upload rebuilt binaries for inspection
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: rebuilt-binary-windows
+          name: rebuilt-binaries-windows
           path: |
-            examples/vector_test/vector_test_msvc.exe
-            examples/vector_test/vector_test_msvc.pdb
+            demo/vector_extra_O2.exe
+            demo/vector_extra_Od.exe
+            demo/*.pdb
           retention-days: 7
 
       - name: Upload build logs on failure
@@ -138,5 +147,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: build-logs-windows
-          path: examples/vector_test/*.log
+          path: demo/*.log
           retention-days: 7
