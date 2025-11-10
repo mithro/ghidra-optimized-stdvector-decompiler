@@ -48,6 +48,7 @@ ifeq ($(USE_NATIVE_MSVC),1)
 
   # Native MSVC link flags
   LINKFLAGS := /DEBUG:FULL \
+	/PDBALTPATH:%_PDB% \
 	/stub:$(CURDIR)/build_setup/dosstub.exe \
 	/TIMESTAMP:1
 else
@@ -63,6 +64,7 @@ else
 	/LIBPATH:"$(SDK_LIB)/ucrt/x64" \
 	/LIBPATH:"$(SDK_LIB)/um/x64" \
 	/DEBUG:FULL \
+	/PDBALTPATH:%_PDB% \
 	/stub:$(CURDIR)/build_setup/dosstub.exe \
 	/TIMESTAMP:1
 endif
