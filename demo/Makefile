@@ -47,11 +47,13 @@ ifeq ($(USE_NATIVE_MSVC),1)
   CXXFLAGS_COMMON := $(CXXFLAGS_BASE)
 
   # Native MSVC link flags
+  # Note: /TIMESTAMP: is NOT supported by Microsoft link.exe (lld-link only)
+  # /Brepro produces hash-based timestamps that vary per build
+  # We patch the PE timestamp post-build using scripts/patch_pe_timestamp.py
   LINKFLAGS := /DEBUG:FULL \
 	/PDBALTPATH:%_PDB% \
 	/stub:$(CURDIR)/build_setup/dosstub.exe \
-	/Brepro \
-	/TIMESTAMP:1
+	/Brepro
 else
   # clang-cl: Need explicit MSVC header paths for cross-compilation
   CXXFLAGS_COMMON := $(CXXFLAGS_BASE) -fuse-ld=$(LLD_LINK) \
@@ -120,6 +122,10 @@ $(OUT_DIR)/%_O2.exe: %.cpp | init-submodule
 		/Fo:$(OUT_DIR)/$*_O2.obj \
 		/Fe:$@ $< \
 		/link $(LINKFLAGS) $(LINKFLAGS_O2)
+ifeq ($(USE_NATIVE_MSVC),1)
+	@echo "  Patching PE timestamp for reproducibility..."
+	@python3 scripts/patch_pe_timestamp.py $@ 1
+endif
 
 $(OUT_DIR)/%_Od.exe: %.cpp | init-submodule
 	@echo "Building debug binary: $@ with $(COMPILER) ($(CXX))"
@@ -128,6 +134,10 @@ $(OUT_DIR)/%_Od.exe: %.cpp | init-submodule
 		/Fo:$(OUT_DIR)/$*_Od.obj \
 		/Fe:$@ $< \
 		/link $(LINKFLAGS) $(LINKFLAGS_Od)
+ifeq ($(USE_NATIVE_MSVC),1)
+	@echo "  Patching PE timestamp for reproducibility..."
+	@python3 scripts/patch_pe_timestamp.py $@ 1
+endif
 
 # Generate Ghidra projects for all binaries
 .PHONY: ghidra-projects
