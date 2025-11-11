@@ -73,7 +73,7 @@ def patch_pe_timestamp(pe_path, timestamp_value=1):
     with open(pe_path, 'wb') as f:
         f.write(data)
 
-    print(f"✓ Patched {pe_path.name}: 0x{original_timestamp:08x} → 0x{timestamp_value:08x}")
+    print(f"  Patched {pe_path.name}: 0x{original_timestamp:08x} -> 0x{timestamp_value:08x}")
     return True
 
 
