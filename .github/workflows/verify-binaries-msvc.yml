@@ -30,6 +30,24 @@ jobs:
         with:
           arch: x64
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        shell: bash
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Install msvcpp-normalize-pe
+        shell: bash
+        run: |
+          export PATH="$HOME/.cargo/bin:$PATH"
+          uv tool install msvcpp-normalize-pe
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
       - name: Backup and remove committed binaries to force rebuild
         shell: bash
         run: |
@@ -52,17 +70,6 @@ jobs:
           cd demo
           make COMPILER=msvc-14.44 all
         timeout-minutes: 45
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install uv
-        shell: bash
-        run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
       - name: Verify committed binaries match rebuilt binaries
         shell: bash
