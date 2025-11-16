@@ -45,8 +45,7 @@ jobs:
         shell: bash
         run: |
           export PATH="$HOME/.cargo/bin:$PATH"
-          uv tool install msvcpp-normalize-pe
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          uv pip install --system msvcpp-normalize-pe
 
       - name: Backup and remove committed binaries to force rebuild
         shell: bash
