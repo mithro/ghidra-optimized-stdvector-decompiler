@@ -124,7 +124,7 @@ $(OUT_DIR)/%_O2.exe: %.cpp | init-submodule
 		/link $(LINKFLAGS) $(LINKFLAGS_O2)
 ifeq ($(USE_NATIVE_MSVC),1)
 	@echo "  Normalizing PE for reproducibility..."
-	@msvcpp-normalize-pe $@ 1
+	@uvx msvcpp-normalize-pe $@ 1
 endif
 
 $(OUT_DIR)/%_Od.exe: %.cpp | init-submodule
@@ -136,7 +136,7 @@ $(OUT_DIR)/%_Od.exe: %.cpp | init-submodule
 		/link $(LINKFLAGS) $(LINKFLAGS_Od)
 ifeq ($(USE_NATIVE_MSVC),1)
 	@echo "  Normalizing PE for reproducibility..."
-	@msvcpp-normalize-pe $@ 1
+	@uvx msvcpp-normalize-pe $@ 1
 endif
 
 # Generate Ghidra projects for all binaries
