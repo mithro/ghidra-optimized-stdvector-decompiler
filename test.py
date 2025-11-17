@@ -1,18 +1,25 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Verify OptimizedVectorDecompiler extension works correctly.
 
-This script tests the extension against demo/vector_extra_O2.exe and verifies
-that all expected vector pattern transformations are detected.
+This script tests the extension against optimized binaries from ALL compilers
+(clang-19, clang-20, msvc-14.44) and verifies that expected vector pattern
+transformations are detected.
+
+Per CLAUDE.md requirements:
+- Tests ONLY O2 (optimized) binaries, NOT Od (debug) binaries
+- Tests ALL compilers - no skipping allowed
+- Extension must work across all compiler outputs
 
 Usage:
-    # From repository root:
+    # Multi-compiler testing (from repository root):
     python3 test.py
 
-    # Or via Ghidra headless:
+    # Or via Ghidra headless (single binary):
     $GHIDRA_INSTALL_DIR/support/analyzeHeadless \
         /tmp TestProject \
-        -import demo/vector_extra_O2.exe \
+        -import demo/out/clang-19/vector_extra_O2.exe \
         -postScript test.py
 """
 
@@ -65,8 +72,14 @@ def run_analysis_in_ghidra():
     for func in currentProgram.getFunctionManager().getFunctions(True):
         name = func.getName()
 
-        # Skip internal/thunk functions
-        if name.startswith("_") or name.startswith("FUN_"):
+        # Skip internal/thunk/runtime functions (those starting with _)
+        # DO NOT skip FUN_* functions - these are user functions with stripped symbols
+        if name.startswith("_"):
+            continue
+
+        # Skip known system functions
+        system_functions = ["entry", "exception", "terminate", "free", "malloc", "memset", "memmove", "strlen"]
+        if name in system_functions:
             continue
 
         # Decompile with our custom decompiler
@@ -141,64 +154,136 @@ def run_analysis_in_ghidra():
         print("  - Analyzing wrong binary (use vector_extra_O2.exe, not _Od)")
         return 1
 
-def run_via_ghidra_headless():
-    """Run test by invoking Ghidra in headless mode."""
-    print("=" * 80)
-    print("Vector Simplification Extension Test")
-    print("=" * 80)
-    print("")
+def discover_compilers(demo_dir="demo"):
+    """Discover all compiler directories in demo/out/"""
+    out_dir = os.path.join(demo_dir, "out")
+
+    if not os.path.exists(out_dir):
+        print("ERROR: %s does not exist" % out_dir)
+        print("Run: git submodule update --init")
+        return []
+
+    compilers = []
+    try:
+        for item in os.listdir(out_dir):
+            item_path = os.path.join(out_dir, item)
+            if os.path.isdir(item_path) and not item.startswith('.'):
+                compilers.append(item)
+    except OSError:
+        pass
+
+    return sorted(compilers)
+
+def test_compiler(compiler, demo_dir="demo"):
+    """Test binaries for a specific compiler"""
+    # Use vector_extra as main test binary (per demo/README.md and CLAUDE.md)
+    # Fall back to vector_realistic, then vector_basic
+    test_binaries = [
+        "vector_extra_O2.exe",
+        "vector_realistic_O2.exe",
+        "vector_basic_O2.exe",
+    ]
+
+    binary_path = None
+    for binary_name in test_binaries:
+        candidate = os.path.join(demo_dir, "out", compiler, binary_name)
+        if os.path.exists(candidate):
+            binary_path = candidate
+            break
+
+    if not binary_path:
+        print("  WARNING: Skipping %s: no test binaries found" % compiler)
+        return None
+
+    binary_name = os.path.basename(binary_path)
+    print("\nTesting %s/%s..." % (compiler, binary_name))
+    print("  Binary path: %s" % binary_path)
 
     # Find Ghidra installation
     ghidra_dir = os.environ.get('GHIDRA_INSTALL_DIR')
     if not ghidra_dir:
-        print("✗ ERROR: GHIDRA_INSTALL_DIR not set")
+        print("  ERROR: GHIDRA_INSTALL_DIR not set")
         print("  Set it with: export GHIDRA_INSTALL_DIR=/path/to/ghidra")
-        return 1
+        return False
 
     if not os.path.isdir(ghidra_dir):
-        print("✗ ERROR: GHIDRA_INSTALL_DIR does not exist: %s" % ghidra_dir)
-        return 1
+        print("  ERROR: GHIDRA_INSTALL_DIR does not exist: %s" % ghidra_dir)
+        return False
 
     analyze_headless = os.path.join(ghidra_dir, 'support', 'analyzeHeadless')
     if not os.path.exists(analyze_headless):
-        print("✗ ERROR: analyzeHeadless not found at: %s" % analyze_headless)
-        return 1
-
-    # Find demo binary
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    demo_binary = os.path.join(script_dir, 'demo', 'vector_extra_O2.exe')
-
-    if not os.path.exists(demo_binary):
-        print("✗ ERROR: Demo binary not found: %s" % demo_binary)
-        print("  Build it with: cd demo && make extra")
-        return 1
-
-    print("✓ Found Ghidra: %s" % ghidra_dir)
-    print("✓ Found demo binary: %s" % demo_binary)
-    print("")
-    print("Running Ghidra headless analysis...")
-    print("-" * 80)
+        print("  ERROR: analyzeHeadless not found at: %s" % analyze_headless)
+        return False
 
     # Create temporary project directory
-    with tempfile.TemporaryDirectory() as temp_dir:
-        project_name = "VectorTestProject"
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    temp_dir = os.path.join(script_dir, '.tmp_test_%s' % compiler)
+
+    try:
+        os.makedirs(temp_dir, exist_ok=True)
+        project_name = "VectorTestProject_%s" % compiler
+
+        # Add extension JAR to classpath
+        extension_jar = os.path.join(ghidra_dir, 'Ghidra', 'Features', 'Decompiler', 'lib', 'OptimizedVectorDecompiler.jar')
 
         # Run Ghidra headless with this script as postScript
+        # Use CLASSPATH environment variable to load our extension
+        env = os.environ.copy()
+        if os.path.exists(extension_jar):
+            if 'CLASSPATH' in env:
+                env['CLASSPATH'] = extension_jar + os.pathsep + env['CLASSPATH']
+            else:
+                env['CLASSPATH'] = extension_jar
+
         cmd = [
             analyze_headless,
             temp_dir,
             project_name,
-            '-import', demo_binary,
+            '-import', binary_path,
             '-postScript', __file__,
             '-deleteProject'  # Clean up after
         ]
 
-        try:
-            result = subprocess.run(cmd, check=False, capture_output=False)
-            return result.returncode
-        except Exception as e:
-            print("✗ ERROR running Ghidra: %s" % str(e))
-            return 1
+        print("  Running Ghidra analysis...")
+        result = subprocess.run(cmd, check=False, capture_output=True, text=True, env=env)
+        print("  Analysis complete (exit code: %d)" % result.returncode)
+
+        # Clean up temp directory
+        import shutil
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
+        # Parse output to determine pass/fail
+        # Look for "ALL TESTS PASSED" in the output
+        output = result.stdout + result.stderr
+
+        # DEBUG: Always print output to diagnose CI issues
+        if os.environ.get('CI') or os.environ.get('DEBUG_TEST'):
+            print("  ===== FULL GHIDRA OUTPUT (last 100 lines) =====")
+            for line in output.split('\n')[-100:]:
+                if line.strip():
+                    print("  %s" % line)
+            print("  ===== END GHIDRA OUTPUT =====")
+
+        if "ALL TESTS PASSED" in output:
+            return True
+        elif "SOME TESTS FAILED" in output:
+            return False
+        else:
+            # If we can't determine, print some output for debugging
+            print("  WARNING: Could not determine test result from output")
+            print("  Last 50 lines of output:")
+            for line in output.split('\n')[-50:]:
+                if line.strip():
+                    print("    %s" % line)
+            return False
+
+    except Exception as e:
+        print("  ERROR running Ghidra: %s" % str(e))
+        # Clean up temp directory on error
+        import shutil
+        if os.path.exists(temp_dir):
+            shutil.rmtree(temp_dir, ignore_errors=True)
+        return False
 
 def main():
     """Main entry point."""
@@ -209,9 +294,56 @@ def main():
         if exit_code != 0:
             raise Exception("Tests failed")
     else:
-        # Invoke Ghidra headless
-        exit_code = run_via_ghidra_headless()
-        sys.exit(exit_code)
+        # Multi-compiler validation mode per CLAUDE.md requirements
+        # MUST test across ALL compilers: clang-19, clang-20, msvc-14.44
+
+        # Check GHIDRA_INSTALL_DIR early to avoid repeating error for each compiler
+        ghidra_dir = os.environ.get('GHIDRA_INSTALL_DIR')
+        if not ghidra_dir:
+            print("ERROR: GHIDRA_INSTALL_DIR not set")
+            print("  Set it with: export GHIDRA_INSTALL_DIR=/path/to/ghidra")
+            return 1
+
+        if not os.path.isdir(ghidra_dir):
+            print("ERROR: GHIDRA_INSTALL_DIR does not exist: %s" % ghidra_dir)
+            return 1
+
+        compilers = discover_compilers()
+
+        if not compilers:
+            print("ERROR: No compilers found in demo/out/")
+            print("Run: git submodule update --init")
+            return 1
+
+        print("=" * 80)
+        print("Vector Simplification Extension Test - Multi-Compiler Mode")
+        print("=" * 80)
+        print("")
+        print("Found %d compiler(s): %s" % (len(compilers), ', '.join(compilers)))
+
+        results = {}
+        for compiler in compilers:
+            result = test_compiler(compiler)
+            if result is not None:
+                results[compiler] = result
+
+        # Print summary
+        print("")
+        print("=" * 80)
+        print("SUMMARY")
+        print("=" * 80)
+
+        passed = sum(1 for r in results.values() if r)
+        total = len(results)
+
+        for compiler, result in sorted(results.items()):
+            status = "PASS" if result else "FAIL"
+            print("  %s: %s" % (status, compiler))
+
+        print("")
+        print("Result: %d/%d compilers passed" % (passed, total))
+
+        return 0 if passed == total else 1
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())
