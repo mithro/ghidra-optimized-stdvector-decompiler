@@ -17,6 +17,10 @@ This is a Ghidra plugin that improves decompilation output for **optimized** Win
 - The extension is specifically designed to work on OPTIMIZED code where patterns are present
 - Do NOT switch tests to use Od binaries as a workaround - fix the extension to work with O2
 - Debug binaries have different code generation and are not representative of real-world use cases
+- **MUST** work across ALL compilers: clang-19, clang-20, and msvc-14.44
+- Any fixes or changes MUST be verified against all three compiler outputs
+- The extension should detect patterns regardless of which compiler generated the binary
+- Test suite validates all compilers - do NOT modify tests to skip failing compilers
 
 ## Project Structure
 

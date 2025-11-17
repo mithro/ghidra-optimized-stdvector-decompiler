@@ -98,8 +98,14 @@ def run_analysis_in_ghidra():
     for func in currentProgram.getFunctionManager().getFunctions(True):
         name = func.getName()
 
-        # Skip internal/thunk functions
-        if name.startswith("_") or name.startswith("FUN_"):
+        # Skip internal/thunk/runtime functions (those starting with _)
+        # DO NOT skip FUN_* functions - these are user functions with stripped symbols
+        if name.startswith("_"):
+            continue
+
+        # Skip known system functions
+        system_functions = ["entry", "exception", "terminate", "free", "malloc", "memset", "memmove", "strlen"]
+        if name in system_functions:
             continue
 
         # Decompile with our custom decompiler
@@ -176,11 +182,12 @@ def run_analysis_in_ghidra():
 
 def test_compiler(compiler, demo_dir="demo"):
     """Test binaries for a specific compiler"""
-    # Try vector_basic first (simpler, more likely to work)
-    # Then try vector_realistic
+    # Use vector_extra as main test binary (per demo/README.md)
+    # Fall back to vector_realistic, then vector_basic
     test_binaries = [
-        "vector_basic_O2.exe",
+        "vector_extra_O2.exe",
         "vector_realistic_O2.exe",
+        "vector_basic_O2.exe",
     ]
 
     binary_path = None

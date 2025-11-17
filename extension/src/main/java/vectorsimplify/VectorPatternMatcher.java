@@ -559,6 +559,17 @@ public class VectorPatternMatcher {
 				}
 				else {
 					System.err.println("    Offset doesn't match vector member offsets (got 0x" + Long.toHexString(offset) + ")");
+					// Even if offset doesn't match, check if this PTRSUB points to a vector
+					// This handles vectors on stack/in structs (e.g., PTRSUB rbp, 0xf8 -> vector)
+					System.err.println("    Checking if PTRSUB result has vector type...");
+					if (isVectorType(varnode)) {
+						System.err.println("    PTRSUB result is a vector! Recursively check uses...");
+						// This varnode IS a vector (e.g., local variable on stack)
+						// Check if it's being used to access members
+						// For now, just trace through - the varnode itself represents the vector base
+						// Return null here and let callers handle vector base varnodes differently
+						// TODO: This needs more sophisticated handling
+					}
 				}
 
 			if (memberType != null) {
@@ -717,10 +728,18 @@ public class VectorPatternMatcher {
 		Varnode current = varnode;
 		Varnode bestSoFar = varnode; // Track the best candidate
 		Varnode withTypeInfo = null; // Track varnode with type info
+		java.util.Set<Varnode> visited = new java.util.HashSet<>();
 
 		System.err.println("  trace from: " + varnode);
 
 		for (int depth = 0; depth < maxDepth; depth++) {
+			// Prevent cycles
+			if (visited.contains(current)) {
+				System.err.println("    [" + depth + "] cycle detected, stopping");
+				break;
+			}
+			visited.add(current);
+
 			System.err.println("    [" + depth + "] " + current);
 
 			// Save if this varnode has vector type info
@@ -731,23 +750,28 @@ public class VectorPatternMatcher {
 				System.err.println("      saved withTypeInfo");
 			}
 
-			// If it's a free varnode (parameter, local variable), this is best!
+			// If it's a free varnode (parameter, local variable), check for type info
 			boolean isFreeOrInput = current.isFree() || current.isInput();
 			System.err.println("      isFree/isInput=" + isFreeOrInput);
 			if (isFreeOrInput) {
 				bestSoFar = current;
 				System.err.println("      saved as bestSoFar - this is a source variable!");
-				// Found the source variable - return it (prefer this over type info)
-				System.err.println("      returning source variable");
-				return bestSoFar;
+				// If this source variable has type info, return it immediately
+				if (hasTypeInfo) {
+					System.err.println("      source has type info - returning!");
+					return current;
+				}
+				// Otherwise continue tracing to see if we can find type info elsewhere
+				// But remember this as our best candidate
 			}
 
 			PcodeOp defOp = current.getDef();
 			System.err.println("      defOp=" + (defOp != null ? defOp.getMnemonic() : "null"));
 			if (defOp == null) {
-				// No definition - return best we found
-				System.err.println("      no def - returning: " + bestSoFar);
-				return bestSoFar;
+				// No definition - return with type info if found, otherwise best
+				Varnode result = (withTypeInfo != null) ? withTypeInfo : bestSoFar;
+				System.err.println("      no def - returning: " + result);
+				return result;
 			}
 
 			int opcode = defOp.getOpcode();
@@ -764,20 +788,49 @@ public class VectorPatternMatcher {
 				// Pointer arithmetic - trace to base pointer
 				// INT_ADD is used by some compilers for pointer arithmetic
 				if (defOp.getNumInputs() > 0) {
-					current = defOp.getInput(0);
+					Varnode base = defOp.getInput(0);
+					// Check if the BASE has type info before continuing
+					if (hasVectorTypeInfo(base) && withTypeInfo == null) {
+						withTypeInfo = base;
+						System.err.println("      PTRSUB base has type info - saved!");
+					}
+					current = base;
 					continue;
 				}
 			}
 			else if (opcode == PcodeOp.LOAD) {
-				// Load from memory - trace to address
+				// Load from memory - the ADDRESS being loaded from might have type info
 				if (defOp.getNumInputs() > 1) {
-					current = defOp.getInput(1);
+					Varnode address = defOp.getInput(1);
+					// Check if address has type info
+					if (hasVectorTypeInfo(address) && withTypeInfo == null) {
+						withTypeInfo = address;
+						System.err.println("      LOAD address has type info - saved!");
+					}
+					current = address;
+					continue;
+				}
+			}
+			else if (opcode == PcodeOp.MULTIEQUAL) {
+				// PHI node - try tracing through each input to find type info
+				System.err.println("      MULTIEQUAL - checking inputs for type info");
+				for (int i = 0; i < defOp.getNumInputs(); i++) {
+					Varnode input = defOp.getInput(i);
+					if (hasVectorTypeInfo(input)) {
+						withTypeInfo = input;
+						System.err.println("      MULTIEQUAL input " + i + " has type info!");
+						break;
+					}
+				}
+				// Continue tracing through first input
+				if (defOp.getNumInputs() > 0) {
+					current = defOp.getInput(0);
 					continue;
 				}
 			}
 
 			// Can't trace further
-			// Return varnode with type info if we found one, otherwise original
+			// Return varnode with type info if we found one, otherwise best source
 			Varnode result = (withTypeInfo != null) ? withTypeInfo : bestSoFar;
 			System.err.println("  trace result (can't trace further): " + result);
 			return result;
