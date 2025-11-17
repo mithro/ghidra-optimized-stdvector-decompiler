@@ -132,10 +132,22 @@ SYSTEM_EXT_DIR="$GHIDRA_INSTALL_DIR/Extensions/Ghidra"
 DECOMPILER_LIB="$GHIDRA_INSTALL_DIR/Ghidra/Features/Decompiler/lib"
 
 if [ "$SKIP_BUILD" = true ]; then
-    # Skip build mode: Install JAR directly
+    # Skip build mode: Create proper extension directory structure
     print_info "Installing JAR to system extensions..."
-    mkdir -p "$SYSTEM_EXT_DIR"
-    cp "$JAR_FILE" "$SYSTEM_EXT_DIR/"
+    EXT_INST_DIR="$SYSTEM_EXT_DIR/OptimizedVectorDecompiler"
+    mkdir -p "$EXT_INST_DIR/lib"
+    cp "$JAR_FILE" "$EXT_INST_DIR/lib/"
+
+    # Create extension.properties file
+    cat > "$EXT_INST_DIR/extension.properties" <<EOF
+name=OptimizedVectorDecompiler
+description=Simplifies decompilation output for optimized std::vector operations
+author=Claude Code
+createdOn=2025-01-01
+version=1.0
+EOF
+
+    print_status "Extension directory structure created"
 
     # Also copy to Decompiler lib for headless mode
     if [ -d "$DECOMPILER_LIB" ]; then
