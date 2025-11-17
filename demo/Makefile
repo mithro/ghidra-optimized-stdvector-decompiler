@@ -77,7 +77,7 @@ LINKFLAGS_O2 := /OPT:REF /OPT:ICF
 LINKFLAGS_Od := /OPT:NOREF /OPT:NOICF
 
 # Source files
-SOURCES := vector_basic.cpp vector_extra.cpp
+SOURCES := vector_basic.cpp vector_extra.cpp vector_realistic.cpp
 
 # Binary targets
 BINARIES_O2 := $(addprefix $(OUT_DIR)/,$(SOURCES:.cpp=_O2.exe))
@@ -102,9 +102,10 @@ optimized: $(BINARIES_O2)
 debug: $(BINARIES_Od)
 
 # Individual source targets
-.PHONY: basic extra
+.PHONY: basic extra realistic
 basic: $(OUT_DIR)/vector_basic_O2.exe $(OUT_DIR)/vector_basic_Od.exe
 extra: $(OUT_DIR)/vector_extra_O2.exe $(OUT_DIR)/vector_extra_Od.exe
+realistic: $(OUT_DIR)/vector_realistic_O2.exe $(OUT_DIR)/vector_realistic_Od.exe
 
 # Initialize submodule if not already done
 .PHONY: init-submodule
@@ -113,6 +114,33 @@ init-submodule:
 		echo "Initializing submodule..."; \
 		git submodule update --init demo/out; \
 	fi
+
+# Special rule for vector_realistic (multi-file compilation)
+$(OUT_DIR)/vector_realistic_O2.exe: vector_realistic.cpp vector_realistic_helpers.cpp vector_realistic_helpers.h | init-submodule
+	@echo "Building multi-file optimized binary: $@ with $(COMPILER) ($(CXX))"
+	@mkdir -p $(OUT_DIR)
+	$(CXX) $(CXXFLAGS_COMMON) $(CXXFLAGS_O2) \
+		vector_realistic.cpp vector_realistic_helpers.cpp \
+		/Fo:$(OUT_DIR)/ \
+		/Fe:$@ \
+		/link $(LINKFLAGS) $(LINKFLAGS_O2)
+ifeq ($(USE_NATIVE_MSVC),1)
+	@echo "  Normalizing PE for reproducibility..."
+	@python3 scripts/normalize_pe.py $@ 1
+endif
+
+$(OUT_DIR)/vector_realistic_Od.exe: vector_realistic.cpp vector_realistic_helpers.cpp vector_realistic_helpers.h | init-submodule
+	@echo "Building multi-file debug binary: $@ with $(COMPILER) ($(CXX))"
+	@mkdir -p $(OUT_DIR)
+	$(CXX) $(CXXFLAGS_COMMON) $(CXXFLAGS_Od) \
+		vector_realistic.cpp vector_realistic_helpers.cpp \
+		/Fo:$(OUT_DIR)/ \
+		/Fe:$@ \
+		/link $(LINKFLAGS) $(LINKFLAGS_Od)
+ifeq ($(USE_NATIVE_MSVC),1)
+	@echo "  Normalizing PE for reproducibility..."
+	@python3 scripts/normalize_pe.py $@ 1
+endif
 
 # Pattern rules for building binaries
 $(OUT_DIR)/%_O2.exe: %.cpp | init-submodule

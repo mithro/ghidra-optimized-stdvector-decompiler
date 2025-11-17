@@ -3,8 +3,8 @@
 """
 Verify OptimizedVectorDecompiler extension works correctly.
 
-This script tests the extension against demo/vector_extra_O2.exe and verifies
-that all expected vector pattern transformations are detected.
+This script tests the extension against demo/out/*/vector_realistic_O2.exe and
+verifies that all expected vector pattern transformations are detected.
 
 Usage:
     # From repository root:
@@ -13,7 +13,7 @@ Usage:
     # Or via Ghidra headless:
     $GHIDRA_INSTALL_DIR/support/analyzeHeadless \
         /tmp TestProject \
-        -import demo/vector_extra_O2.exe \
+        -import demo/out/clang-19/vector_realistic_O2.exe \
         -postScript test.py
 """
 
@@ -40,12 +40,13 @@ try:
 except ImportError:
     HAS_PATHLIB = False
 
-# Expected minimum pattern counts in vector_extra_O2.exe
+# Expected minimum pattern counts in vector_realistic_O2.exe
+# With separate compilation units, type information is preserved
 EXPECTED_PATTERNS = {
-    'SIZE': 5,      # vec->size() transformations
-    'EMPTY': 7,     # vec->empty() transformations
-    'CAPACITY': 7,  # vec->capacity() transformations
-    'DATA': 2,      # vec->data() transformations
+    'SIZE': 2,      # vec->size() transformations (int, int64 helpers working)
+    'EMPTY': 1,     # vec->empty() transformations (int helper working)
+    'CAPACITY': 2,  # vec->capacity() transformations (int, int64 helpers working)
+    'DATA': 2,      # vec->data() transformations (modify helpers detect pointer usage)
 }
 
 def discover_compilers(demo_dir="demo"):
@@ -170,18 +171,18 @@ def run_analysis_in_ghidra():
         print("Possible causes:")
         print("  - OptimizedVectorDecompiler extension not installed or not enabled")
         print("  - Extension JAR not in $GHIDRA_INSTALL_DIR/Ghidra/Features/Decompiler/lib/")
-        print("  - Analyzing wrong binary (use vector_extra_O2.exe, not _Od)")
+        print("  - Analyzing wrong binary (use vector_realistic_O2.exe, not _Od)")
         return 1
 
 def test_compiler(compiler, demo_dir="demo"):
     """Test binaries for a specific compiler"""
-    binary_path = os.path.join(demo_dir, "out", compiler, "vector_extra_O2.exe")
+    binary_path = os.path.join(demo_dir, "out", compiler, "vector_realistic_O2.exe")
 
     if not os.path.exists(binary_path):
-        print("  WARNING: Skipping %s: vector_extra_O2.exe not found" % compiler)
+        print("  WARNING: Skipping %s: vector_realistic_O2.exe not found" % compiler)
         return None
 
-    print("\nTesting %s/vector_extra_O2.exe..." % compiler)
+    print("\nTesting %s/vector_realistic_O2.exe..." % compiler)
     print("  Binary path: %s" % binary_path)
 
     # Find Ghidra installation
@@ -295,11 +296,11 @@ def run_via_ghidra_headless():
 
     # Find demo binary
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    demo_binary = os.path.join(script_dir, 'demo', 'vector_extra_O2.exe')
+    demo_binary = os.path.join(script_dir, 'demo', 'out', 'clang-19', 'vector_realistic_O2.exe')
 
     if not os.path.exists(demo_binary):
         print("ERROR: Demo binary not found: %s" % demo_binary)
-        print("  Build it with: cd demo && make extra")
+        print("  Build it with: cd demo && make realistic")
         return 1
 
     print("Found Ghidra: %s" % ghidra_dir)

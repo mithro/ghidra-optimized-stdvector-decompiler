@@ -137,6 +137,18 @@ public class VectorPatternMatcher {
 		PcodeOp subOp = subVarnode.getDef();
 		System.err.println("  sub def: " + (subOp != null ? subOp.getMnemonic() : "null"));
 
+		// Trace through CAST and COPY operations to find the underlying INT_SUB
+		while (subOp != null && (subOp.getOpcode() == PcodeOp.CAST || subOp.getOpcode() == PcodeOp.COPY)) {
+			System.err.println("  tracing through " + subOp.getMnemonic());
+			if (subOp.getNumInputs() > 0) {
+				subVarnode = subOp.getInput(0);
+				subOp = subVarnode.getDef();
+				System.err.println("  new sub def: " + (subOp != null ? subOp.getMnemonic() : "null"));
+			} else {
+				break;
+			}
+		}
+
 		if (subOp == null || subOp.getOpcode() != PcodeOp.INT_SUB) {
 			return null;
 		}
@@ -207,6 +219,18 @@ public class VectorPatternMatcher {
 
 		PcodeOp subOp = subVarnode.getDef();
 		System.err.println("  sub def: " + (subOp != null ? subOp.getMnemonic() : "null"));
+
+		// Trace through CAST and COPY operations to find the underlying INT_SUB
+		while (subOp != null && (subOp.getOpcode() == PcodeOp.CAST || subOp.getOpcode() == PcodeOp.COPY)) {
+			System.err.println("  tracing through " + subOp.getMnemonic());
+			if (subOp.getNumInputs() > 0) {
+				subVarnode = subOp.getInput(0);
+				subOp = subVarnode.getDef();
+				System.err.println("  new sub def: " + (subOp != null ? subOp.getMnemonic() : "null"));
+			} else {
+				break;
+			}
+		}
 
 		if (subOp == null || subOp.getOpcode() != PcodeOp.INT_SUB) {
 			return null;
@@ -429,11 +453,25 @@ public class VectorPatternMatcher {
 	 * Identify if a varnode represents a vector member access.
 	 */
 	private VectorMember identifyVectorMember(Varnode varnode) {
+		return identifyVectorMemberRecursive(varnode, new java.util.HashSet<>());
+	}
+
+	/**
+	 * Identify if a varnode represents a vector member access (recursive helper with cycle detection).
+	 */
+	private VectorMember identifyVectorMemberRecursive(Varnode varnode, java.util.Set<Varnode> visited) {
 		System.err.println("identifyVectorMember called for: " + varnode);
 		if (varnode == null) {
 			System.err.println("  varnode is null - returning null");
 			return null;
 		}
+
+		// Prevent infinite recursion by checking if we've already visited this varnode
+		if (visited.contains(varnode)) {
+			System.err.println("  already visited - returning null to prevent cycle");
+			return null;
+		}
+		visited.add(varnode);
 
 		PcodeOp defOp = varnode.getDef();
 		System.err.println("  defOp: " + (defOp != null ? defOp.getMnemonic() + " (" + defOp + ")" : "null"));
@@ -446,7 +484,7 @@ public class VectorPatternMatcher {
 		if (defOp.getOpcode() == PcodeOp.CAST || defOp.getOpcode() == PcodeOp.COPY) {
 			if (defOp.getNumInputs() > 0) {
 				System.err.println("  tracing through " + defOp.getMnemonic());
-				return identifyVectorMember(defOp.getInput(0));
+				return identifyVectorMemberRecursive(defOp.getInput(0), visited);
 			}
 		}
 
@@ -455,14 +493,14 @@ public class VectorPatternMatcher {
 		if (defOp.getOpcode() == PcodeOp.MULTIEQUAL) {
 			if (defOp.getNumInputs() > 0) {
 				System.err.println("  tracing through MULTIEQUAL (trying first input)");
-				VectorMember result = identifyVectorMember(defOp.getInput(0));
+				VectorMember result = identifyVectorMemberRecursive(defOp.getInput(0), visited);
 				if (result != null) {
 					return result;
 				}
 				// If first doesn't work, try second input
 				if (defOp.getNumInputs() > 1) {
 					System.err.println("  trying second MULTIEQUAL input");
-					return identifyVectorMember(defOp.getInput(1));
+					return identifyVectorMemberRecursive(defOp.getInput(1), visited);
 				}
 			}
 		}
@@ -470,63 +508,83 @@ public class VectorPatternMatcher {
 		// Check for PTRSUB or PTRADD with vector member offset
 		if (defOp.getOpcode() == PcodeOp.PTRSUB || defOp.getOpcode() == PcodeOp.PTRADD) {
 			System.err.println("  Found PTRSUB/PTRADD operation");
-			if (defOp.getNumInputs() >= 2) {
-				Varnode baseVarnode = defOp.getInput(0);
-				Varnode offsetVarnode = defOp.getInput(1);
 
-				System.err.println("    baseVarnode: " + baseVarnode);
-				System.err.println("    offsetVarnode: " + offsetVarnode);
-				System.err.println("    offsetVarnode.isConstant(): " + offsetVarnode.isConstant());
+			Varnode baseVarnode = defOp.getInput(0);
+			long offset = -1;
 
-				if (offsetVarnode.isConstant()) {
-					long offset = offsetVarnode.getOffset();
-					System.err.println("    offset value: 0x" + Long.toHexString(offset));
+			// PTRSUB: result = base - offset (input[1] is byte offset)
+			// PTRADD: result = base + (index * element_size) (input[1] is index, input[2] is element size)
+			if (defOp.getOpcode() == PcodeOp.PTRSUB) {
+				if (defOp.getNumInputs() >= 2) {
+					Varnode offsetVarnode = defOp.getInput(1);
+					System.err.println("    PTRSUB - baseVarnode: " + baseVarnode);
+					System.err.println("    PTRSUB - offsetVarnode: " + offsetVarnode);
 
-					VectorMemberType memberType = null;
-					if (offset == OFFSET_MYFIRST) {
-						memberType = VectorMemberType.MYFIRST;
-						System.err.println("    Matched MYFIRST (offset 0x0)");
-					}
-					else if (offset == OFFSET_MYLAST) {
-						memberType = VectorMemberType.MYLAST;
-						System.err.println("    Matched MYLAST (offset 0x8)");
-					}
-					else if (offset == OFFSET_MYEND) {
-						memberType = VectorMemberType.MYEND;
-						System.err.println("    Matched MYEND (offset 0x10)");
-					}
-					else {
-						System.err.println("    Offset doesn't match vector member offsets");
-					}
-
-					// FIX: Trace back to source variable to find vector type
-					// The baseVarnode might be an intermediate result (pointer, etc.)
-					// We need to find the original variable that has the vector type
-					if (memberType != null) {
-						System.err.println("    Calling traceToSourceVariable...");
-						Varnode sourceVar = traceToSourceVariable(baseVarnode);
-						System.err.println("    sourceVar result: " + sourceVar);
-						if (sourceVar != null) {
-							System.err.println("    Calling isVectorType...");
-							boolean hasVectorTypeInfo = isVectorType(sourceVar);
-							System.err.println("    hasVectorTypeInfo: " + hasVectorTypeInfo);
-							if (hasVectorTypeInfo) {
-								// Store the source variable, not the intermediate PTRSUB result
-								// This allows isSameVectorBase() to work correctly
-								System.err.println("    SUCCESS: Returning VectorMember(" + memberType + ", " + sourceVar + ")");
-								return new VectorMember(memberType, sourceVar);
-							}
-							else {
-								System.err.println("    FAILED: isVectorType returned false");
-							}
-						}
-						else {
-							System.err.println("    FAILED: traceToSourceVariable returned null");
-						}
+					if (offsetVarnode.isConstant()) {
+						offset = offsetVarnode.getOffset();
+						System.err.println("    PTRSUB - offset value: 0x" + Long.toHexString(offset));
 					}
 				}
 			}
+			else if (defOp.getOpcode() == PcodeOp.PTRADD) {
+				if (defOp.getNumInputs() >= 3) {
+					Varnode indexVarnode = defOp.getInput(1);
+					Varnode elementSizeVarnode = defOp.getInput(2);
+					System.err.println("    PTRADD - baseVarnode: " + baseVarnode);
+					System.err.println("    PTRADD - indexVarnode: " + indexVarnode);
+					System.err.println("    PTRADD - elementSizeVarnode: " + elementSizeVarnode);
+
+					if (indexVarnode.isConstant() && elementSizeVarnode.isConstant()) {
+						long index = indexVarnode.getOffset();
+						long elementSize = elementSizeVarnode.getOffset();
+						offset = index * elementSize;
+						System.err.println("    PTRADD - calculated offset: " + index + " * " + elementSize + " = 0x" + Long.toHexString(offset));
+					}
+				}
+			}
+
+			if (offset != -1) {
+				VectorMemberType memberType = null;
+				if (offset == OFFSET_MYFIRST) {
+					memberType = VectorMemberType.MYFIRST;
+					System.err.println("    Matched MYFIRST (offset 0x0)");
+				}
+				else if (offset == OFFSET_MYLAST) {
+					memberType = VectorMemberType.MYLAST;
+					System.err.println("    Matched MYLAST (offset 0x8)");
+				}
+				else if (offset == OFFSET_MYEND) {
+					memberType = VectorMemberType.MYEND;
+					System.err.println("    Matched MYEND (offset 0x10)");
+				}
+				else {
+					System.err.println("    Offset doesn't match vector member offsets (got 0x" + Long.toHexString(offset) + ")");
+				}
+
+			if (memberType != null) {
+				System.err.println("    Calling traceToSourceVariable...");
+				Varnode sourceVar = traceToSourceVariable(baseVarnode);
+				System.err.println("    sourceVar result: " + sourceVar);
+				if (sourceVar != null) {
+					System.err.println("    Calling isVectorType...");
+					boolean hasVectorTypeInfo = isVectorType(sourceVar);
+					System.err.println("    hasVectorTypeInfo: " + hasVectorTypeInfo);
+					if (hasVectorTypeInfo) {
+						// Store the source variable, not the intermediate PTRSUB result
+						// This allows isSameVectorBase() to work correctly
+						System.err.println("    SUCCESS: Returning VectorMember(" + memberType + ", " + sourceVar + ")");
+						return new VectorMember(memberType, sourceVar);
+					}
+					else {
+						System.err.println("    FAILED: isVectorType returned false");
+					}
+				}
+				else {
+					System.err.println("    FAILED: traceToSourceVariable returned null");
+				}
+			}
 		}
+	}
 
 		// Check for INT_ADD with vector member offset
 		// Some compilers use INT_ADD instead of PTRSUB/PTRADD
@@ -777,41 +835,45 @@ public class VectorPatternMatcher {
 	 * Uses Ghidra's type information to validate.
 	 */
 	private boolean isVectorType(Varnode varnode) {
+		System.err.println("      >>> isVectorType called for: " + varnode);
 		if (varnode == null) {
+			System.err.println("      >>> isVectorType: varnode is null, returning false");
 			return false;
 		}
 
 		// Try to get the high-level type information
 		HighVariable highVar = varnode.getHigh();
+		System.err.println("      >>> isVectorType: highVar = " + highVar);
 		if (highVar == null) {
-			// No type info available - ALLOW for now
-			// The caller (identifyVectorMember) already verified we have
-			// vector-specific offsets (0x0, 0x8, 0x10), which is strong evidence
-			// This allows the extension to work on stripped binaries
-			System.err.println("    isVectorType: no HighVariable, but allowing based on structural evidence");
-			return true;
+			// No type info available - REJECT for safety
+			// Many non-vector structs use offset 0x8/0x10/0x18
+			System.err.println("      >>> isVectorType: no HighVariable, REJECTING (no type info)");
+			return false;
 		}
 
 		// Get the data type
 		DataType dataType = highVar.getDataType();
+		System.err.println("      >>> isVectorType: dataType = " + dataType);
 		if (dataType == null) {
-			// No type info available - ALLOW based on structural evidence
-			System.err.println("    isVectorType: no DataType, but allowing based on structural evidence");
-			return true;
+			// No type info available - REJECT
+			System.err.println("      >>> isVectorType: no DataType, REJECTING (no type info)");
+			return false;
 		}
 
 		// Get the type name
 		String typeName = dataType.getName();
+		System.err.println("      >>> isVectorType: typeName = \"" + typeName + "\"");
 		if (typeName == null) {
-			// No type name - ALLOW based on structural evidence
-			System.err.println("    isVectorType: no type name, but allowing based on structural evidence");
-			return true;
+			// No type name - REJECT
+			System.err.println("      >>> isVectorType: no type name, REJECTING (no type info)");
+			return false;
 		}
 
 		// Check if this is a vector type
 		// Handles: vector<T>, std::vector<T>, _Vector_val<T>
 		if (typeName.contains("vector<") || typeName.contains("vector_") ||
 			typeName.contains("Vector_val")) {
+			System.err.println("      >>> isVectorType: typeName contains vector, returning TRUE");
 			return true;
 		}
 
@@ -821,8 +883,10 @@ public class VectorPatternMatcher {
 			DataType pointedType = ptrType.getDataType();
 			if (pointedType != null) {
 				String pointedName = pointedType.getName();
+				System.err.println("      >>> isVectorType: checking pointed type: \"" + pointedName + "\"");
 				if (pointedName != null && (pointedName.contains("vector<") ||
 					pointedName.contains("vector_") || pointedName.contains("Vector_val"))) {
+					System.err.println("      >>> isVectorType: pointed type contains vector, returning TRUE");
 					return true;
 				}
 			}
@@ -830,14 +894,17 @@ public class VectorPatternMatcher {
 
 		// Check the full path name (includes namespace)
 		String pathName = dataType.getPathName();
+		System.err.println("      >>> isVectorType: pathName = \"" + pathName + "\"");
 		if (pathName != null && (pathName.contains("/std/vector") ||
 			pathName.contains("/vector<") || pathName.contains("std::vector"))) {
+			System.err.println("      >>> isVectorType: pathName contains vector, returning TRUE");
 			return true;
 		}
 
-		// REJECT: We have type info, but it's not a vector type
+		// Type info exists but doesn't match vector - REJECT
 		// This filters out false positives where offset 0x8/0x10/0x18 is used
 		// for non-vector structs
+		System.err.println("      >>> isVectorType: type doesn't match vector, REJECTING");
 		return false;
 	}
 
