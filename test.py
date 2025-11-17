@@ -176,48 +176,61 @@ def discover_compilers(demo_dir="demo"):
 
 def test_compiler(compiler, demo_dir="demo"):
     """Test binaries for a specific compiler"""
-    # Use vector_extra as main test binary (per demo/README.md and CLAUDE.md)
-    # Fall back to vector_realistic, then vector_basic
+    # Test ALL binaries - no fallbacks allowed per CLAUDE.md
     test_binaries = [
         "vector_extra_O2.exe",
         "vector_realistic_O2.exe",
         "vector_basic_O2.exe",
     ]
 
-    binary_path = None
+    print("\nTesting %s..." % compiler)
+
+    # Verify all required binaries exist
+    missing_binaries = []
     for binary_name in test_binaries:
-        candidate = os.path.join(demo_dir, "out", compiler, binary_name)
-        if os.path.exists(candidate):
-            binary_path = candidate
-            break
+        binary_path = os.path.join(demo_dir, "out", compiler, binary_name)
+        if not os.path.exists(binary_path):
+            missing_binaries.append(binary_name)
 
-    if not binary_path:
-        print("  WARNING: Skipping %s: no test binaries found" % compiler)
-        return None
+    if missing_binaries:
+        print("  ERROR: Missing required binaries:")
+        for binary in missing_binaries:
+            print("    - %s" % binary)
+        return False
 
+    # Test each binary
+    all_passed = True
+    for binary_name in test_binaries:
+        binary_path = os.path.join(demo_dir, "out", compiler, binary_name)
+        result = test_binary(compiler, binary_path)
+        if not result:
+            all_passed = False
+
+    return all_passed
+
+def test_binary(compiler, binary_path):
+    """Test a single binary"""
     binary_name = os.path.basename(binary_path)
-    print("\nTesting %s/%s..." % (compiler, binary_name))
-    print("  Binary path: %s" % binary_path)
+    print("    Testing %s..." % binary_name)
 
     # Find Ghidra installation
     ghidra_dir = os.environ.get('GHIDRA_INSTALL_DIR')
     if not ghidra_dir:
-        print("  ERROR: GHIDRA_INSTALL_DIR not set")
-        print("  Set it with: export GHIDRA_INSTALL_DIR=/path/to/ghidra")
+        print("      ERROR: GHIDRA_INSTALL_DIR not set")
         return False
 
     if not os.path.isdir(ghidra_dir):
-        print("  ERROR: GHIDRA_INSTALL_DIR does not exist: %s" % ghidra_dir)
+        print("      ERROR: GHIDRA_INSTALL_DIR does not exist: %s" % ghidra_dir)
         return False
 
     analyze_headless = os.path.join(ghidra_dir, 'support', 'analyzeHeadless')
     if not os.path.exists(analyze_headless):
-        print("  ERROR: analyzeHeadless not found at: %s" % analyze_headless)
+        print("      ERROR: analyzeHeadless not found at: %s" % analyze_headless)
         return False
 
     # Create temporary project directory
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    temp_dir = os.path.join(script_dir, '.tmp_test_%s' % compiler)
+    temp_dir = os.path.join(script_dir, '.tmp_test_%s_%s' % (compiler, binary_name.replace('.exe', '')))
 
     try:
         os.makedirs(temp_dir, exist_ok=True)
@@ -244,9 +257,7 @@ def test_compiler(compiler, demo_dir="demo"):
             '-deleteProject'  # Clean up after
         ]
 
-        print("  Running Ghidra analysis...")
         result = subprocess.run(cmd, check=False, capture_output=True, text=True, env=env)
-        print("  Analysis complete (exit code: %d)" % result.returncode)
 
         # Clean up temp directory
         import shutil
@@ -258,27 +269,30 @@ def test_compiler(compiler, demo_dir="demo"):
 
         # DEBUG: Always print output to diagnose CI issues
         if os.environ.get('CI') or os.environ.get('DEBUG_TEST'):
-            print("  ===== FULL GHIDRA OUTPUT (last 100 lines) =====")
-            for line in output.split('\n')[-100:]:
+            print("      ===== GHIDRA OUTPUT (last 50 lines) =====")
+            for line in output.split('\n')[-50:]:
                 if line.strip():
-                    print("  %s" % line)
-            print("  ===== END GHIDRA OUTPUT =====")
+                    print("      %s" % line)
+            print("      ===== END OUTPUT =====")
 
         if "ALL TESTS PASSED" in output:
+            print("      ✓ PASS")
             return True
         elif "SOME TESTS FAILED" in output:
+            print("      ✗ FAIL")
             return False
         else:
             # If we can't determine, print some output for debugging
-            print("  WARNING: Could not determine test result from output")
-            print("  Last 50 lines of output:")
-            for line in output.split('\n')[-50:]:
-                if line.strip():
-                    print("    %s" % line)
+            print("      ✗ FAIL (could not determine result)")
+            if not (os.environ.get('CI') or os.environ.get('DEBUG_TEST')):
+                print("      Last 20 lines of output:")
+                for line in output.split('\n')[-20:]:
+                    if line.strip():
+                        print("        %s" % line)
             return False
 
     except Exception as e:
-        print("  ERROR running Ghidra: %s" % str(e))
+        print("      ERROR running Ghidra: %s" % str(e))
         # Clean up temp directory on error
         import shutil
         if os.path.exists(temp_dir):
