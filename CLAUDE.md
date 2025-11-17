@@ -4,13 +4,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Ghidra plugin that improves decompilation output for optimized Windows C++ binaries compiled with MSVC. It automatically detects and transforms std::vector pointer arithmetic patterns into readable C++ method calls (e.g., `(_Mylast - _Myfirst) >> 3` becomes `vec->size()`).
+This is a Ghidra plugin that improves decompilation output for **optimized** Windows C++ binaries compiled with MSVC. It automatically detects and transforms std::vector pointer arithmetic patterns into readable C++ method calls (e.g., `(_Mylast - _Myfirst) >> 3` becomes `vec->size()`).
 
 **Key Transformation Examples:**
 - SIZE: `(_Mylast - _Myfirst) >> N` → `vec->size()`
 - EMPTY: `_Myfirst == _Mylast` → `vec->empty()`
 - CAPACITY: `(_Myend - _Myfirst) >> N` → `vec->capacity()`
 - DATA: `*_Myfirst` (when dereferenced) → `vec->data()`
+
+**CRITICAL TESTING REQUIREMENT:**
+- **MUST** test against O2 (optimized) binaries (`*_O2.exe`), NOT Od (debug) binaries
+- The extension is specifically designed to work on OPTIMIZED code where patterns are present
+- Do NOT switch tests to use Od binaries as a workaround - fix the extension to work with O2
+- Debug binaries have different code generation and are not representative of real-world use cases
 
 ## Project Structure
 
