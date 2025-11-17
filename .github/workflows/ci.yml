@@ -78,22 +78,43 @@ jobs:
           name: extension-jar-java${{ matrix.java-version }}
           path: extension/build/libs/
 
-      - name: Debug - List downloaded files
+      - name: Debug - Environment and paths
         run: |
-          echo "Contents of extension/build/libs/:"
-          ls -lR extension/build/libs/ || echo "Directory not found"
-          echo "Looking for JAR from setup.sh perspective:"
-          SCRIPT_DIR="$(pwd)"
-          echo "SCRIPT_DIR=$SCRIPT_DIR"
-          echo "Looking for: $SCRIPT_DIR/extension/build/libs/OptimizedVectorDecompiler.jar"
-          ls -l "$SCRIPT_DIR/extension/build/libs/OptimizedVectorDecompiler.jar" || echo "JAR not found at expected path"
+          echo "=== Environment Variables ==="
+          echo "GHIDRA_INSTALL_DIR=$GHIDRA_INSTALL_DIR"
+          echo "HOME=$HOME"
+          echo ""
+          echo "=== Ghidra Installation ==="
+          ls -la "$GHIDRA_INSTALL_DIR/" || echo "GHIDRA_INSTALL_DIR not found"
+          echo ""
+          echo "=== Downloaded JAR ==="
+          ls -lR extension/build/libs/ || echo "JAR directory not found"
+          echo ""
+          echo "=== Extension directories (before install) ==="
+          echo "Extensions dir:"
+          ls -la "$GHIDRA_INSTALL_DIR/Extensions/Ghidra/" 2>/dev/null || echo "Extensions/Ghidra/ not found"
+          echo "Decompiler lib:"
+          ls -la "$GHIDRA_INSTALL_DIR/Ghidra/Features/Decompiler/lib/" 2>/dev/null || echo "Decompiler/lib not found"
 
       - name: Install extension using setup.sh
         run: |
           # Run setup.sh with --skip-build since JAR already exists
+          echo "Running setup.sh with GHIDRA_INSTALL_DIR=$GHIDRA_INSTALL_DIR"
           ./setup.sh --skip-build
         env:
           GHIDRA_INSTALL_DIR: ${{ env.GHIDRA_INSTALL_DIR }}
+
+      - name: Verify extension installation
+        run: |
+          echo "=== Verifying extension installation ==="
+          echo "Checking Extensions directory:"
+          ls -la "$GHIDRA_INSTALL_DIR/Extensions/Ghidra/" || echo "Not found"
+          echo ""
+          echo "Checking Decompiler lib:"
+          ls -la "$GHIDRA_INSTALL_DIR/Ghidra/Features/Decompiler/lib/" || echo "Not found"
+          echo ""
+          echo "Looking for OptimizedVectorDecompiler.jar:"
+          find "$GHIDRA_INSTALL_DIR" -name "OptimizedVectorDecompiler.jar" -ls || echo "JAR not found anywhere"
 
       - name: Setup Python and uv
         run: |
