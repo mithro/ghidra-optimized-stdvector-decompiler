@@ -208,7 +208,18 @@ def test_compiler(compiler, demo_dir="demo"):
         os.makedirs(temp_dir, exist_ok=True)
         project_name = "VectorTestProject_%s" % compiler
 
+        # Add extension JAR to classpath
+        extension_jar = os.path.join(ghidra_dir, 'Ghidra', 'Features', 'Decompiler', 'lib', 'OptimizedVectorDecompiler.jar')
+
         # Run Ghidra headless with this script as postScript
+        # Use CLASSPATH environment variable to load our extension
+        env = os.environ.copy()
+        if os.path.exists(extension_jar):
+            if 'CLASSPATH' in env:
+                env['CLASSPATH'] = extension_jar + os.pathsep + env['CLASSPATH']
+            else:
+                env['CLASSPATH'] = extension_jar
+
         cmd = [
             analyze_headless,
             temp_dir,
@@ -219,7 +230,7 @@ def test_compiler(compiler, demo_dir="demo"):
         ]
 
         print("  Running Ghidra analysis...")
-        result = subprocess.run(cmd, check=False, capture_output=True, text=True)
+        result = subprocess.run(cmd, check=False, capture_output=True, text=True, env=env)
         print("  Analysis complete (exit code: %d)" % result.returncode)
 
         # Clean up temp directory
@@ -301,7 +312,18 @@ def run_via_ghidra_headless():
     with tempfile.TemporaryDirectory() as temp_dir:
         project_name = "VectorTestProject"
 
+        # Add extension JAR to classpath
+        extension_jar = os.path.join(ghidra_dir, 'Ghidra', 'Features', 'Decompiler', 'lib', 'OptimizedVectorDecompiler.jar')
+
         # Run Ghidra headless with this script as postScript
+        # Use CLASSPATH environment variable to load our extension
+        env = os.environ.copy()
+        if os.path.exists(extension_jar):
+            if 'CLASSPATH' in env:
+                env['CLASSPATH'] = extension_jar + os.pathsep + env['CLASSPATH']
+            else:
+                env['CLASSPATH'] = extension_jar
+
         cmd = [
             analyze_headless,
             temp_dir,
@@ -312,7 +334,7 @@ def run_via_ghidra_headless():
         ]
 
         try:
-            result = subprocess.run(cmd, check=False, capture_output=False)
+            result = subprocess.run(cmd, check=False, capture_output=False, env=env)
             return result.returncode
         except Exception as e:
             print("ERROR running Ghidra: %s" % str(e))
